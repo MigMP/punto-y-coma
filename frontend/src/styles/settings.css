@@ -1,0 +1,497 @@
+/* name=frontend/src/styles/settings.css */
+/* =========================
+   SETTINGS / THEME APP ONLY
+   Solo afecta páginas internas con body.app-page
+   No toca bienvenida, login ni registro.
+   ========================= */
+
+/* TEMA GLOBAL SOLO APP */
+
+body.app-page.theme-light {
+  background: #f3f6fb !important;
+  color: #111827 !important;
+}
+
+body.app-page.theme-dark {
+  background: #020617 !important;
+  color: #f8fafc !important;
+}
+
+/* NAVBAR SOLO APP */
+
+body.app-page.theme-light .nav {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
+  backdrop-filter: blur(18px);
+}
+
+body.app-page.theme-dark .nav {
+  background: rgba(2, 6, 23, 0.94) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09) !important;
+  backdrop-filter: blur(18px);
+}
+
+body.app-page.theme-light .navBrandText strong,
+body.app-page.theme-light .navUserMini strong,
+body.app-page.theme-light .navLink,
+body.app-page.theme-light .navBell,
+body.app-page.theme-light .navUserButton {
+  color: #111827 !important;
+}
+
+body.app-page.theme-dark .navBrandText strong,
+body.app-page.theme-dark .navUserMini strong,
+body.app-page.theme-dark .navLink,
+body.app-page.theme-dark .navBell,
+body.app-page.theme-dark .navUserButton {
+  color: #f8fafc !important;
+}
+
+body.app-page.theme-light .navBrandText span,
+body.app-page.theme-light .navUserMini small,
+body.app-page.theme-light .navChevron {
+  color: #64748b !important;
+}
+
+body.app-page.theme-dark .navBrandText span,
+body.app-page.theme-dark .navUserMini small,
+body.app-page.theme-dark .navChevron {
+  color: #94a3b8 !important;
+}
+
+body.app-page.theme-light .navLinks,
+body.app-page.theme-light .navBell,
+body.app-page.theme-light .navUserButton {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+body.app-page.theme-dark .navLinks,
+body.app-page.theme-dark .navBell,
+body.app-page.theme-dark .navUserButton {
+  background: rgba(15, 23, 42, 0.88) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+body.app-page.theme-light .navLink.active,
+body.app-page.theme-dark .navLink.active {
+  background: linear-gradient(135deg, #2563eb, #0891b2) !important;
+  color: #ffffff !important;
+}
+
+body.app-page.theme-light .navDropdown {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+  box-shadow: 0 22px 50px rgba(15, 23, 42, 0.16) !important;
+}
+
+body.app-page.theme-dark .navDropdown {
+  background: #0f172a !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.4) !important;
+}
+
+body.app-page.theme-light .navDropdown a,
+body.app-page.theme-light .navDropdown button {
+  color: #111827 !important;
+}
+
+body.app-page.theme-dark .navDropdown a,
+body.app-page.theme-dark .navDropdown button {
+  color: #f8fafc !important;
+}
+
+/* CONTENEDORES SOLO APP */
+
+body.app-page.theme-light .app-bg,
+body.app-page.theme-light main,
+body.app-page.theme-light .container {
+  background: transparent !important;
+}
+
+body.app-page.theme-dark .app-bg,
+body.app-page.theme-dark main,
+body.app-page.theme-dark .container {
+  background: transparent !important;
+}
+
+/* CARDS SOLO APP */
+
+body.app-page.theme-light .card {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  color: #111827 !important;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06) !important;
+}
+
+body.app-page.theme-dark .card {
+  background: rgba(15, 23, 42, 0.94) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #f8fafc !important;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22) !important;
+}
+
+body.app-page.theme-light h1,
+body.app-page.theme-light h2,
+body.app-page.theme-light h3,
+body.app-page.theme-light strong {
+  color: #111827 !important;
+}
+
+body.app-page.theme-dark h1,
+body.app-page.theme-dark h2,
+body.app-page.theme-dark h3,
+body.app-page.theme-dark strong {
+  color: #f8fafc !important;
+}
+
+body.app-page.theme-light .msg,
+body.app-page.theme-light .muted,
+body.app-page.theme-light p {
+  color: #64748b !important;
+}
+
+body.app-page.theme-dark .msg,
+body.app-page.theme-dark .muted,
+body.app-page.theme-dark p {
+  color: #94a3b8 !important;
+}
+
+/* LISTAS / ITEMS / KPI SOLO APP */
+
+body.app-page.theme-light .item,
+body.app-page.theme-light .kpi,
+body.app-page.theme-light .profileField,
+body.app-page.theme-light .profileSimpleList div,
+body.app-page.theme-light .permissionItem,
+body.app-page.theme-light .settingsItem {
+  background: #f8fafc !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  color: #111827 !important;
+}
+
+body.app-page.theme-dark .item,
+body.app-page.theme-dark .kpi,
+body.app-page.theme-dark .profileField,
+body.app-page.theme-dark .profileSimpleList div,
+body.app-page.theme-dark .permissionItem,
+body.app-page.theme-dark .settingsItem {
+  background: rgba(30, 41, 59, 0.72) !important;
+  border-color: rgba(255, 255, 255, 0.09) !important;
+  color: #f8fafc !important;
+}
+
+/* ARREGLO CAJAS EN MODO OSCURO SOLO APP */
+
+body.app-page.theme-dark .card form,
+body.app-page.theme-dark .card .filters,
+body.app-page.theme-dark .card .filterBox,
+body.app-page.theme-dark .card .toolbar,
+body.app-page.theme-dark .card .actions,
+body.app-page.theme-dark .card .metaActions,
+body.app-page.theme-dark .card .empty,
+body.app-page.theme-dark .card .emptyState,
+body.app-page.theme-dark .card .placeholder,
+body.app-page.theme-dark .card .noData,
+body.app-page.theme-dark .card .no-data,
+body.app-page.theme-dark .card .formBox,
+body.app-page.theme-dark .card .formPanel,
+body.app-page.theme-dark .card .reportBox,
+body.app-page.theme-dark .card .reportFilters,
+body.app-page.theme-dark .card .listEmpty,
+body.app-page.theme-dark .card .notice,
+body.app-page.theme-dark .card .panel,
+body.app-page.theme-dark .card .box,
+body.app-page.theme-dark .card .surface {
+  background: rgba(30, 41, 59, 0.72) !important;
+  border-color: rgba(255, 255, 255, 0.09) !important;
+  color: #f8fafc !important;
+}
+
+body.app-page.theme-dark .card > p,
+body.app-page.theme-dark .card > .msg,
+body.app-page.theme-dark .card > .muted,
+body.app-page.theme-dark .lista > p,
+body.app-page.theme-dark .lista > .msg,
+body.app-page.theme-dark .lista > .muted {
+  background: transparent !important;
+  color: #94a3b8 !important;
+}
+
+body.app-page.theme-dark p[class],
+body.app-page.theme-dark div[class*="empty" i],
+body.app-page.theme-dark div[class*="placeholder" i],
+body.app-page.theme-dark div[class*="nodata" i],
+body.app-page.theme-dark div[class*="no-data" i] {
+  border-color: rgba(255, 255, 255, 0.09) !important;
+}
+
+/* MODO CLARO SOLO APP */
+
+body.app-page.theme-light .card form,
+body.app-page.theme-light .card .filters,
+body.app-page.theme-light .card .filterBox,
+body.app-page.theme-light .card .toolbar,
+body.app-page.theme-light .card .actions,
+body.app-page.theme-light .card .metaActions,
+body.app-page.theme-light .card .empty,
+body.app-page.theme-light .card .emptyState,
+body.app-page.theme-light .card .placeholder,
+body.app-page.theme-light .card .noData,
+body.app-page.theme-light .card .no-data,
+body.app-page.theme-light .card .formBox,
+body.app-page.theme-light .card .formPanel,
+body.app-page.theme-light .card .reportBox,
+body.app-page.theme-light .card .reportFilters,
+body.app-page.theme-light .card .listEmpty,
+body.app-page.theme-light .card .notice,
+body.app-page.theme-light .card .panel,
+body.app-page.theme-light .card .box,
+body.app-page.theme-light .card .surface {
+  background: #f8fafc !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  color: #111827 !important;
+}
+
+/* FORMULARIOS SOLO APP */
+
+body.app-page.theme-light input,
+body.app-page.theme-light select,
+body.app-page.theme-light textarea {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border-color: rgba(15, 23, 42, 0.14) !important;
+}
+
+body.app-page.theme-dark input,
+body.app-page.theme-dark select,
+body.app-page.theme-dark textarea {
+  background: #020617 !important;
+  color: #f8fafc !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+body.app-page.theme-light input::placeholder,
+body.app-page.theme-light textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+body.app-page.theme-dark input::placeholder,
+body.app-page.theme-dark textarea::placeholder {
+  color: #64748b !important;
+}
+
+/* BOTONES SOLO APP */
+
+body.app-page.theme-light .badge,
+body.app-page.theme-light .btn-ghost,
+body.app-page.theme-light .settingsButton {
+  background: #eef2ff !important;
+  color: #1e40af !important;
+  border-color: rgba(37, 99, 235, 0.18) !important;
+}
+
+body.app-page.theme-dark .badge,
+body.app-page.theme-dark .btn-ghost,
+body.app-page.theme-dark .settingsButton {
+  background: rgba(255, 255, 255, 0.07) !important;
+  color: #bfdbfe !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+body.app-page.theme-light .badge.ok,
+body.app-page.theme-light .settingsButton.active,
+body.app-page.theme-light .settingsButton.primary {
+  background: #dcfce7 !important;
+  color: #166534 !important;
+  border-color: rgba(22, 101, 52, 0.18) !important;
+}
+
+body.app-page.theme-dark .badge.ok,
+body.app-page.theme-dark .settingsButton.active,
+body.app-page.theme-dark .settingsButton.primary {
+  background: linear-gradient(135deg, #2563eb, #0891b2) !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+body.app-page.theme-light .btn-del,
+body.app-page.theme-light .settingsButton.danger {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+  border-color: rgba(153, 27, 27, 0.18) !important;
+}
+
+body.app-page.theme-dark .btn-del,
+body.app-page.theme-dark .settingsButton.danger {
+  background: rgba(239, 68, 68, 0.14) !important;
+  color: #fecaca !important;
+  border-color: rgba(239, 68, 68, 0.25) !important;
+}
+
+/* QUITAR CÍRCULOS DECORATIVOS SOLO APP */
+
+body.app-page .card::before,
+body.app-page .card::after,
+body.app-page .kpi::before,
+body.app-page .kpi::after,
+body.app-page .item::before,
+body.app-page .item::after,
+body.app-page .profilePanel::before,
+body.app-page .profilePanel::after,
+body.app-page .profileCleanHero::before,
+body.app-page .profileCleanHero::after,
+body.app-page .settingsHero::before,
+body.app-page .settingsHero::after,
+body.app-page .settingsSection::before,
+body.app-page .settingsSection::after {
+  display: none !important;
+  content: none !important;
+}
+
+body.app-page .card,
+body.app-page .kpi,
+body.app-page .item,
+body.app-page .profilePanel,
+body.app-page .profileCleanHero,
+body.app-page .settingsHero,
+body.app-page .settingsSection {
+  background-image: none !important;
+}
+
+/* AJUSTES LAYOUT */
+
+.settingsPage {
+  max-width: 1280px;
+}
+
+.settingsHero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 32px;
+}
+
+.settingsHero h1 {
+  margin: 6px 0 6px;
+  font-size: clamp(2.5rem, 5vw, 4.2rem);
+  line-height: 0.95;
+}
+
+.settingsTag {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: rgba(20, 184, 166, 0.12);
+  color: #2dd4bf;
+  border: 1px solid rgba(20, 184, 166, 0.2);
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+}
+
+body.app-page.theme-light .settingsTag {
+  background: #ccfbf1;
+  color: #0f766e;
+  border-color: rgba(15, 118, 110, 0.16);
+}
+
+.settingsSection {
+  padding: 26px;
+}
+
+.settingsSectionHeader {
+  margin-bottom: 18px;
+}
+
+.settingsSectionHeader h2 {
+  margin: 0 0 6px;
+}
+
+.settingsList {
+  display: grid;
+  gap: 12px;
+}
+
+.settingsItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid transparent;
+}
+
+.settingsItem strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.settingsItem p {
+  margin: 0;
+  font-weight: 700;
+}
+
+.settingsButton {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: 900;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.settingsForm {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: end;
+}
+
+.settingsForm label {
+  display: grid;
+  gap: 8px;
+  font-weight: 900;
+}
+
+.settingsForm input {
+  min-height: 46px;
+  border-radius: 14px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  outline: none;
+}
+
+.settingsForm button {
+  min-height: 46px;
+}
+
+.settingsItem.danger {
+  border-color: rgba(239, 68, 68, 0.2) !important;
+}
+
+@media (max-width: 900px) {
+  .settingsHero,
+  .settingsItem {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .settingsForm {
+    grid-template-columns: 1fr;
+  }
+
+  .settingsButton {
+    width: 100%;
+  }
+}

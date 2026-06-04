@@ -1,0 +1,745 @@
+/* =========================================================
+   WELCOME PUBLIC FINAL FIX
+   Este archivo gana sobre settings.css.
+   No lo importes en Welcome.jsx; ya se importa al final en App.jsx.
+   ========================================================= */
+
+body.public-page,
+body.public-page #root {
+  background: #f4f7fb !important;
+  color: #111827 !important;
+}
+
+/* Reset fuerte para evitar textos transparentes/lavados */
+body.public-page .welcomePage,
+body.public-page .welcomePage * {
+  opacity: 1 !important;
+  filter: none !important;
+  text-shadow: none !important;
+}
+
+/* Fondo general */
+
+body.public-page .welcomePage {
+  min-height: 100vh !important;
+  padding: 24px !important;
+  background:
+    radial-gradient(900px 420px at 12% 8%, rgba(30, 58, 138, 0.18), transparent 62%),
+    radial-gradient(820px 420px at 92% 10%, rgba(15, 118, 110, 0.16), transparent 58%),
+    linear-gradient(180deg, #f8fafc 0%, #f4f7fb 48%, #eef4ff 100%) !important;
+  color: #111827 !important;
+}
+
+body.public-page .welcomeShell {
+  width: min(1180px, 100%) !important;
+  margin: 0 auto !important;
+}
+
+/* NAV */
+
+body.public-page .welcomeNav {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  padding: 14px !important;
+  margin-bottom: 22px !important;
+  border-radius: 24px !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid rgba(148, 163, 184, 0.28) !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08) !important;
+  backdrop-filter: blur(18px) !important;
+}
+
+body.public-page .brand {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  text-decoration: none !important;
+  color: #111827 !important;
+}
+
+body.public-page .brandMark {
+  width: 46px !important;
+  height: 46px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 16px !important;
+  background: linear-gradient(135deg, #1e3a8a, #0f766e) !important;
+  color: #ffffff !important;
+  font-size: 32px !important;
+  font-weight: 1000 !important;
+  line-height: 1 !important;
+  box-shadow: 0 14px 34px rgba(30, 58, 138, 0.25) !important;
+}
+
+body.public-page .brand strong {
+  display: block !important;
+  color: #111827 !important;
+  font-size: 16px !important;
+  letter-spacing: -0.02em !important;
+}
+
+body.public-page .brand small {
+  display: block !important;
+  margin-top: 2px !important;
+  color: #64748b !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+}
+
+body.public-page .welcomeNavLinks {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+body.public-page .welcomeNavLinks a {
+  text-decoration: none !important;
+  color: #64748b !important;
+  font-weight: 800 !important;
+  font-size: 14px !important;
+  padding: 10px 12px !important;
+  border-radius: 999px !important;
+}
+
+body.public-page .welcomeNavLinks a:hover {
+  color: #1e3a8a !important;
+  background: rgba(30, 58, 138, 0.08) !important;
+}
+
+body.public-page .welcomeNavActions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+/* BUTTONS */
+
+body.public-page .btn {
+  border: 0 !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 42px !important;
+  padding: 11px 16px !important;
+  border-radius: 14px !important;
+  font-weight: 900 !important;
+  font-size: 14px !important;
+  white-space: nowrap !important;
+}
+
+body.public-page .btnPrimary {
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #1e3a8a, #0f766e) !important;
+  box-shadow: 0 16px 34px rgba(30, 58, 138, 0.22) !important;
+}
+
+body.public-page .btnGhost {
+  color: #1e3a8a !important;
+  background: rgba(30, 58, 138, 0.07) !important;
+  border: 1px solid rgba(30, 58, 138, 0.14) !important;
+}
+
+body.public-page .btnSoft {
+  color: #1e3a8a !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(148, 163, 184, 0.28) !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08) !important;
+}
+
+body.public-page .btnLarge {
+  min-height: 50px !important;
+  padding: 13px 20px !important;
+  border-radius: 16px !important;
+  font-size: 15px !important;
+}
+
+/* HERO */
+
+body.public-page .welcomeHero {
+  display: grid !important;
+  grid-template-columns: 1.1fr 0.9fr !important;
+  gap: 24px !important;
+  align-items: center !important;
+  padding: 32px !important;
+  border: 1px solid rgba(148, 163, 184, 0.28) !important;
+  border-radius: 28px !important;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.86)),
+    radial-gradient(500px 260px at 16% 18%, rgba(30, 58, 138, 0.12), transparent 70%) !important;
+  box-shadow: 0 22px 70px rgba(15, 23, 42, 0.12) !important;
+  overflow: hidden !important;
+  position: relative !important;
+  color: #111827 !important;
+}
+
+body.public-page .welcomeHero::before {
+  content: "" !important;
+  position: absolute !important;
+  width: 340px !important;
+  height: 340px !important;
+  right: -130px !important;
+  top: -140px !important;
+  border-radius: 50% !important;
+  background: rgba(15, 118, 110, 0.12) !important;
+}
+
+body.public-page .welcomeHero::after {
+  content: "" !important;
+  position: absolute !important;
+  width: 220px !important;
+  height: 220px !important;
+  left: -90px !important;
+  bottom: -100px !important;
+  border-radius: 50% !important;
+  background: rgba(245, 158, 11, 0.12) !important;
+}
+
+body.public-page .heroContent,
+body.public-page .heroPanel {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* CLAVE: evitar caja oscura y texto invisible */
+body.public-page .heroContent {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: #111827 !important;
+}
+
+body.public-page .heroBadge {
+  width: fit-content !important;
+  margin-bottom: 16px !important;
+  padding: 8px 12px !important;
+  border-radius: 999px !important;
+  color: #1e3a8a !important;
+  background: rgba(30, 58, 138, 0.08) !important;
+  border: 1px solid rgba(30, 58, 138, 0.12) !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+}
+
+body.public-page .welcomeHero h1,
+body.public-page .heroContent h1 {
+  margin: 0 !important;
+  max-width: 780px !important;
+  color: #172554 !important;
+  font-size: clamp(34px, 5vw, 64px) !important;
+  line-height: 0.98 !important;
+  letter-spacing: -0.06em !important;
+  font-weight: 1000 !important;
+}
+
+body.public-page .welcomeLead,
+body.public-page .heroContent p {
+  max-width: 68ch !important;
+  margin: 18px 0 0 !important;
+  color: #64748b !important;
+  font-size: 16px !important;
+  line-height: 1.75 !important;
+  font-weight: 600 !important;
+}
+
+body.public-page .welcomeActions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+  margin-top: 24px !important;
+}
+
+body.public-page .heroTrust {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  margin-top: 22px !important;
+}
+
+body.public-page .heroTrust span {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  color: #334155 !important;
+  background: rgba(255, 255, 255, 0.82) !important;
+  border: 1px solid rgba(148, 163, 184, 0.28) !important;
+  padding: 8px 11px !important;
+  border-radius: 999px !important;
+  font-size: 13px !important;
+  font-weight: 850 !important;
+}
+
+body.public-page .heroTrust span::before {
+  content: "" !important;
+  width: 7px !important;
+  height: 7px !important;
+  border-radius: 99px !important;
+  background: #0f766e !important;
+}
+
+/* PANEL DERECHO */
+
+body.public-page .heroPanel {
+  border-radius: 26px !important;
+  padding: 20px !important;
+  border: 1px solid rgba(30, 58, 138, 0.14) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12) !important;
+  color: #111827 !important;
+}
+
+body.public-page .panelHeader {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  gap: 14px !important;
+  margin-bottom: 18px !important;
+}
+
+body.public-page .panelLabel {
+  display: block !important;
+  margin-bottom: 6px !important;
+  color: #64748b !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+}
+
+body.public-page .panelHeader h2 {
+  margin: 0 !important;
+  color: #172554 !important;
+  font-size: 24px !important;
+  letter-spacing: -0.04em !important;
+}
+
+body.public-page .statusPill {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 32px !important;
+  padding: 7px 11px !important;
+  border-radius: 999px !important;
+  font-size: 12px !important;
+  font-weight: 1000 !important;
+  white-space: nowrap !important;
+}
+
+body.public-page .statusMedium {
+  color: #92400e !important;
+  background: rgba(245, 158, 11, 0.16) !important;
+  border: 1px solid rgba(245, 158, 11, 0.25) !important;
+}
+
+body.public-page .scorePreview {
+  padding: 16px !important;
+  border-radius: 20px !important;
+  background: linear-gradient(180deg, #f8fafc, #ffffff) !important;
+  border: 1px solid rgba(148, 163, 184, 0.28) !important;
+  color: #111827 !important;
+}
+
+body.public-page .scorePreview > div:first-child {
+  display: flex !important;
+  align-items: end !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+}
+
+body.public-page .scoreLabel {
+  color: #64748b !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+}
+
+body.public-page .scorePreview strong {
+  color: #1e3a8a !important;
+  font-size: 44px !important;
+  line-height: 1 !important;
+  letter-spacing: -0.08em !important;
+}
+
+body.public-page .scoreBar {
+  margin: 14px 0 !important;
+  height: 11px !important;
+  overflow: hidden !important;
+  border-radius: 999px !important;
+  background: #e2e8f0 !important;
+}
+
+body.public-page .scoreBar span,
+body.public-page .scoreProgress {
+  display: block !important;
+  width: 74% !important;
+  height: 100% !important;
+  border-radius: inherit !important;
+  background: linear-gradient(90deg, #1e3a8a, #0f766e, #f59e0b) !important;
+}
+
+body.public-page .scorePreview p {
+  margin: 0 !important;
+  color: #64748b !important;
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+  font-weight: 650 !important;
+}
+
+body.public-page .miniStats {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 10px !important;
+  margin-top: 12px !important;
+}
+
+body.public-page .miniStats div {
+  padding: 13px 10px !important;
+  border-radius: 18px !important;
+  background: #f8fafc !important;
+  border: 1px solid rgba(148, 163, 184, 0.28) !important;
+}
+
+body.public-page .miniStats strong {
+  display: block !important;
+  color: #172554 !important;
+  font-size: 21px !important;
+  line-height: 1 !important;
+  margin-bottom: 7px !important;
+}
+
+body.public-page .miniStats span {
+  display: block !important;
+  color: #64748b !important;
+  font-size: 11px !important;
+  font-weight: 850 !important;
+  line-height: 1.3 !important;
+}
+
+body.public-page .recommendationBox {
+  margin-top: 12px !important;
+  padding: 14px !important;
+  border-radius: 18px !important;
+  color: #0f172a !important;
+  background: rgba(15, 118, 110, 0.12) !important;
+  border: 1px solid rgba(15, 118, 110, 0.18) !important;
+}
+
+body.public-page .recommendationBox span {
+  display: block !important;
+  color: #0f766e !important;
+  font-size: 12px !important;
+  font-weight: 1000 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+  margin-bottom: 6px !important;
+}
+
+body.public-page .recommendationBox p {
+  margin: 0 !important;
+  color: #334155 !important;
+  line-height: 1.55 !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+}
+
+/* MÉTRICAS */
+
+body.public-page .welcomeMetrics {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 14px !important;
+  margin-top: 18px !important;
+}
+
+body.public-page .metricCard {
+  padding: 18px !important;
+  border-radius: 22px !important;
+  background: rgba(255, 255, 255, 0.84) !important;
+  border: 1px solid rgba(148, 163, 184, 0.28) !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08) !important;
+}
+
+body.public-page .metricCard strong {
+  display: block !important;
+  color: #1e3a8a !important;
+  font-size: 30px !important;
+  letter-spacing: -0.06em !important;
+  line-height: 1 !important;
+  margin-bottom: 8px !important;
+}
+
+body.public-page .metricCard span {
+  display: block !important;
+  color: #64748b !important;
+  font-size: 13px !important;
+  font-weight: 850 !important;
+}
+
+/* SECCIONES */
+
+body.public-page .sectionBlock {
+  margin-top: 22px !important;
+  padding: 28px !important;
+  border-radius: 28px !important;
+  border: 1px solid rgba(148, 163, 184, 0.28) !important;
+  background: rgba(255, 255, 255, 0.78) !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08) !important;
+}
+
+body.public-page .sectionHeader {
+  max-width: 720px !important;
+  margin-bottom: 22px !important;
+}
+
+body.public-page .sectionTag {
+  display: inline-flex !important;
+  margin-bottom: 10px !important;
+  padding: 7px 10px !important;
+  border-radius: 999px !important;
+  color: #0f766e !important;
+  background: rgba(15, 118, 110, 0.1) !important;
+  border: 1px solid rgba(15, 118, 110, 0.14) !important;
+  font-size: 12px !important;
+  font-weight: 1000 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+}
+
+body.public-page .sectionHeader h2,
+body.public-page .objectiveBlock h2 {
+  margin: 0 !important;
+  color: #172554 !important;
+  font-size: clamp(25px, 3vw, 38px) !important;
+  line-height: 1.08 !important;
+  letter-spacing: -0.05em !important;
+}
+
+body.public-page .sectionHeader p,
+body.public-page .objectiveBlock p {
+  margin: 12px 0 0 !important;
+  color: #64748b !important;
+  line-height: 1.75 !important;
+  font-weight: 650 !important;
+}
+
+/* FEATURES */
+
+body.public-page .featureGrid {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 14px !important;
+}
+
+body.public-page .featureCard {
+  padding: 18px !important;
+  min-height: 210px !important;
+  border-radius: 22px !important;
+  background: linear-gradient(180deg, #ffffff, #f8fafc) !important;
+  border: 1px solid rgba(148, 163, 184, 0.28) !important;
+}
+
+body.public-page .featureIcon {
+  width: 42px !important;
+  height: 42px !important;
+  display: grid !important;
+  place-items: center !important;
+  margin-bottom: 18px !important;
+  border-radius: 14px !important;
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #1e3a8a, #0f766e) !important;
+  font-size: 13px !important;
+  font-weight: 1000 !important;
+}
+
+body.public-page .featureCard h3 {
+  margin: 0 0 10px !important;
+  color: #172554 !important;
+  font-size: 18px !important;
+  letter-spacing: -0.03em !important;
+}
+
+body.public-page .featureCard p {
+  margin: 0 !important;
+  color: #64748b !important;
+  line-height: 1.65 !important;
+  font-size: 14px !important;
+  font-weight: 650 !important;
+}
+
+/* ROLES */
+
+body.public-page .roleGrid {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 14px !important;
+}
+
+body.public-page .roleCard {
+  padding: 20px !important;
+  border-radius: 24px !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(148, 163, 184, 0.28) !important;
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.06) !important;
+}
+
+body.public-page .roleBadge {
+  display: inline-flex !important;
+  margin-bottom: 18px !important;
+  padding: 7px 10px !important;
+  border-radius: 999px !important;
+  color: #1e3a8a !important;
+  background: rgba(30, 58, 138, 0.08) !important;
+  border: 1px solid rgba(30, 58, 138, 0.12) !important;
+  font-size: 12px !important;
+  font-weight: 1000 !important;
+}
+
+body.public-page .roleCard h3 {
+  margin: 0 0 12px !important;
+  color: #172554 !important;
+  font-size: 22px !important;
+  letter-spacing: -0.04em !important;
+}
+
+body.public-page .roleCard ul {
+  margin: 0 !important;
+  padding-left: 18px !important;
+  color: #64748b !important;
+  line-height: 1.75 !important;
+  font-size: 14px !important;
+  font-weight: 650 !important;
+}
+
+/* OBJETIVO */
+
+body.public-page .objectiveBlock {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 22px !important;
+  margin-top: 22px !important;
+  padding: 28px !important;
+  border-radius: 28px !important;
+  color: #ffffff !important;
+  background:
+    radial-gradient(600px 280px at 12% 10%, rgba(15, 118, 110, 0.46), transparent 62%),
+    linear-gradient(135deg, #172554, #1e3a8a) !important;
+  box-shadow: 0 24px 70px rgba(30, 58, 138, 0.24) !important;
+}
+
+body.public-page .objectiveBlock .sectionTag {
+  color: #dbeafe !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+body.public-page .objectiveBlock h2 {
+  color: #ffffff !important;
+}
+
+body.public-page .objectiveBlock p {
+  max-width: 720px !important;
+  color: rgba(255, 255, 255, 0.78) !important;
+}
+
+/* FOOTER */
+
+body.public-page .welcomeFooter {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  margin-top: 20px !important;
+  padding: 18px 4px 6px !important;
+  color: #334155 !important;
+  font-size: 14px !important;
+  font-weight: 750 !important;
+}
+
+body.public-page .welcomeFooter strong {
+  color: #172554 !important;
+}
+
+body.public-page .welcomeFooter .muted {
+  color: #64748b !important;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 980px) {
+  body.public-page .welcomeHero {
+    grid-template-columns: 1fr !important;
+  }
+
+  body.public-page .featureGrid,
+  body.public-page .welcomeMetrics {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  body.public-page .roleGrid {
+    grid-template-columns: 1fr !important;
+  }
+
+  body.public-page .objectiveBlock {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+  }
+}
+
+@media (max-width: 760px) {
+  body.public-page .welcomePage {
+    padding: 14px !important;
+  }
+
+  body.public-page .welcomeNav {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+  }
+
+  body.public-page .welcomeNavLinks {
+    width: 100% !important;
+    overflow-x: auto !important;
+    padding-bottom: 4px !important;
+  }
+
+  body.public-page .welcomeNavActions {
+    width: 100% !important;
+  }
+
+  body.public-page .welcomeNavActions .btn {
+    flex: 1 !important;
+  }
+
+  body.public-page .welcomeHero {
+    padding: 22px !important;
+    border-radius: 24px !important;
+  }
+
+  body.public-page .welcomeHero h1 {
+    font-size: clamp(34px, 12vw, 48px) !important;
+  }
+
+  body.public-page .welcomeActions .btn {
+    width: 100% !important;
+  }
+
+  body.public-page .miniStats,
+  body.public-page .featureGrid,
+  body.public-page .welcomeMetrics {
+    grid-template-columns: 1fr !important;
+  }
+
+  body.public-page .sectionBlock,
+  body.public-page .objectiveBlock {
+    padding: 22px !important;
+    border-radius: 24px !important;
+  }
+
+  body.public-page .welcomeFooter {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+  }
+}

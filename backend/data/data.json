@@ -1,0 +1,137 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "Administrador Demo",
+      "email": "admin@test.com",
+      "passwordHash": "$2b$10$FGQ5H8CgPRdZljWk2t3h5e0vYQ65bpwDSEju52nbsZsjRFfKN8E62",
+      "role": "administrador",
+      "status": "active",
+      "createdAt": "2026-06-01T00:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "name": "Maestro Demo",
+      "email": "maestro@test.com",
+      "passwordHash": "$2b$10$FGQ5H8CgPRdZljWk2t3h5e0vYQ65bpwDSEju52nbsZsjRFfKN8E62",
+      "role": "maestro",
+      "status": "active",
+      "createdAt": "2026-06-01T00:00:00.000Z"
+    },
+    {
+      "id": 3,
+      "name": "Miguel Demo",
+      "email": "miguel@alumno.ipn.mx",
+      "passwordHash": "$2b$10$FGQ5H8CgPRdZljWk2t3h5e0vYQ65bpwDSEju52nbsZsjRFfKN8E62",
+      "role": "alumno",
+      "grupo": "6IV10",
+      "boleta": "2024050729",
+      "status": "active",
+      "createdAt": "2026-06-01T00:00:00.000Z"
+    },
+    {
+      "id": 4,
+      "name": "Miguel Pedroza",
+      "email": "alumno30@alumno.ipn.mx",
+      "passwordHash": "$2b$10$IVAH6owq/QRkdACY1eEuV.g3M8/y80XpkwYotYypTOj7RAEso9XwC",
+      "role": "alumno",
+      "status": "active",
+      "createdAt": "2026-06-01T18:22:12.090Z",
+      "updatedAt": "2026-06-01T18:22:12.090Z",
+      "grupo": "6IV10",
+      "boleta": "2024050721"
+    },
+    {
+      "id": 5,
+      "name": "Miguel Pedroza",
+      "email": "maestro30@gmail.com",
+      "passwordHash": "$2b$10$UZIg/LHfcmXRXfbBr91kdu9S2lBwF.rlksdkL42pQ1i/zl.kEJ.ZK",
+      "role": "maestro",
+      "status": "active",
+      "createdAt": "2026-06-01T18:26:54.361Z",
+      "updatedAt": "2026-06-01T18:26:54.361Z"
+    },
+    {
+      "id": 6,
+      "name": "Miguel Pedroza",
+      "email": "1emirandapedrozam@gmail.com",
+      "passwordHash": "$2b$10$24wYDGnZBL9efZTlNCGrWOQ4qJGkIOjLF55rLfuen7aIW3G2L4jgu",
+      "role": "maestro",
+      "status": "active",
+      "createdAt": "2026-06-01T22:34:52.025Z",
+      "updatedAt": "2026-06-01T22:34:52.025Z"
+    }
+  ],
+  "materias": [
+    {
+      "id": 6,
+      "nombre": "programacion",
+      "createdAt": "2026-06-01T18:29:10.042Z"
+    },
+    {
+      "id": 7,
+      "nombre": "desarrolo web",
+      "createdAt": "2026-06-01T18:29:37.438Z"
+    },
+    {
+      "id": 8,
+      "nombre": "aaa",
+      "createdAt": "2026-06-01T22:26:25.021Z",
+      "updatedAt": "2026-06-01T22:26:25.021Z"
+    }
+  ],
+  "calificaciones": [
+    {
+      "id": 1,
+      "alumnoEmail": "alumno30@alumno.ipn.mx",
+      "alumnoNombre": "Miguel Pedroza",
+      "materiaId": 6,
+      "calificacion": 10,
+      "creadoPor": "maestro30@gmail.com",
+      "createdAt": "2026-06-01T18:30:20.400Z",
+      "updatedAt": "2026-06-01T18:30:20.400Z"
+    },
+    {
+      "id": 2,
+      "alumnoEmail": "alumno30@alumno.ipn.mx",
+      "alumnoNombre": "Miguel Pedroza",
+      "materiaId": 7,
+      "calificacion": 8,
+      "creadoPor": "maestro30@gmail.com",
+      "createdAt": "2026-06-01T18:30:37.126Z",
+      "updatedAt": "2026-06-01T18:30:37.126Z"
+    }
+  ],
+  "asignaciones": [
+    {
+      "id": 1,
+      "materiaId": 6,
+      "maestroEmail": "maestro30@gmail.com",
+      "createdAt": "2026-06-01T18:29:44.493Z"
+    },
+    {
+      "id": 2,
+      "materiaId": 7,
+      "maestroEmail": "maestro30@gmail.com",
+      "createdAt": "2026-06-01T18:29:47.692Z"
+    }
+  ],
+  "actividad": [
+    {
+      "id": 1,
+      "type": "materia_creada",
+      "title": "Materia creada",
+      "description": "Se creó la materia aaa.",
+      "entity": "materia",
+      "entityId": 8,
+      "actor": {
+        "id": 1,
+        "name": "Administrador Demo",
+        "email": "admin@test.com",
+        "role": "administrador"
+      },
+      "createdAt": "2026-06-01T22:26:25.022Z"
+    }
+  ],
+  "tareas": []
+}

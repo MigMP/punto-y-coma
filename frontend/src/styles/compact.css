@@ -1,0 +1,193 @@
+/* MODO COMPACTO REAL */
+
+.compact-mode .container {
+  gap: 14px;
+}
+
+.compact-mode .card {
+  padding: 18px;
+  border-radius: 18px;
+}
+
+.compact-mode .card h1 {
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  margin-bottom: 8px;
+}
+
+.compact-mode .card h2 {
+  font-size: 1.35rem;
+  margin-bottom: 10px;
+}
+
+.compact-mode .msg,
+.compact-mode .muted {
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.compact-mode .lista {
+  gap: 8px;
+}
+
+.compact-mode .item {
+  padding: 12px 14px;
+  border-radius: 14px;
+  min-height: auto;
+}
+
+.compact-mode .item strong {
+  font-size: 0.95rem;
+}
+
+.compact-mode .coachRow {
+  gap: 10px;
+}
+
+.compact-mode .kpi {
+  padding: 14px;
+  border-radius: 16px;
+}
+
+.compact-mode .kpiTitle {
+  font-size: 0.75rem;
+}
+
+.compact-mode .kpiValue {
+  font-size: 1.6rem;
+}
+
+.compact-mode input,
+.compact-mode select,
+.compact-mode textarea {
+  min-height: 40px;
+  padding: 9px 12px;
+  font-size: 0.92rem;
+}
+
+.compact-mode button,
+.compact-mode .badge,
+.compact-mode .btn-ghost,
+.compact-mode .btn-del {
+  min-height: 34px;
+  padding: 7px 12px;
+  font-size: 0.85rem;
+}
+
+.compact-mode .gridX {
+  gap: 10px;
+}
+
+.compact-mode .planSpacingSmall {
+  margin-top: 10px;
+}
+
+.compact-mode .profileCleanHero {
+  padding: 22px;
+  gap: 18px;
+}
+
+.compact-mode .profilePhotoButton {
+  width: 96px;
+  height: 96px;
+  border-radius: 22px;
+}
+
+.compact-mode .profilePhotoButton img {
+  border-radius: 19px;
+}
+
+.compact-mode .profileCleanInfo h1 {
+  font-size: clamp(1.9rem, 4vw, 3rem);
+}
+
+.compact-mode .profilePanel {
+  padding: 20px;
+}
+
+.compact-mode .profileSimpleList div,
+.compact-mode .permissionItem {
+  padding: 12px 14px;
+  min-height: 46px;
+}
+
+.compact-mode .nav {
+  min-height: 62px;
+}
+
+.compact-mode .navInner {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.compact-mode .navLink {
+  padding: 8px 10px;
+  font-size: 0.9rem;
+}
+
+.compact-mode .navBell {
+  width: 38px;
+  height: 38px;
+}
+
+.compact-mode .navUserButton {
+  min-height: 38px;
+  padding: 5px 9px 5px 5px;
+}
+
+.compact-mode .navAvatar {
+  width: 30px;
+  height: 30px;
+  font-size: 0.75rem;
+}
+
+.compact-mode .navUserMini strong {
+  font-size: 0.84rem;
+}
+
+.compact-mode .navUserMini small {
+  font-size: 0.7rem;
+}
+
+.compact-mode .navDropdown {
+  width: 220px;
+  padding: 8px;
+}
+
+.compact-mode .navDropdown a,
+.compact-mode .navDropdown button {
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.compact-mode .profileAction {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 0.85rem;
+}
+
+.compact-mode .profileSimpleList span {
+  font-size: 0.72rem;
+}
+
+.compact-mode .profileSimpleList strong {
+  font-size: 0.95rem;
+}
+
+/* Ajuste específico para tablas o listas largas */
+.compact-mode table {
+  font-size: 0.9rem;
+}
+
+.compact-mode th,
+.compact-mode td {
+  padding: 8px 10px;
+}
+
+/* Reduce separación en formularios */
+.compact-mode label {
+  gap: 6px;
+}
+
+.compact-mode form {
+  gap: 10px;
+}
