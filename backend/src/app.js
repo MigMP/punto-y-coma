@@ -53,6 +53,20 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
+/* 
+  Ruta principal para comprobar que el backend funciona.
+  Esta ruta sirve para tomar la captura de evidencia JSON.
+*/
+app.get("/", (req, res) => {
+  res.json({
+    ok: true,
+    mensaje: "Backend funcionando correctamente",
+    proyecto: "Punto y Coma",
+    servidor: "Node.js",
+    puerto: 3001,
+  });
+});
+
 app.use("/api", healthRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api", usersRoutes);
