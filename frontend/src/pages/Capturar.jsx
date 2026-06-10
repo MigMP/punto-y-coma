@@ -123,6 +123,7 @@ export default function Capturar() {
 
   const [filtroMateria, setFiltroMateria] = useState("ALL");
   const [filtroGrupo, setFiltroGrupo] = useState("ALL");
+  const [filtroAlumno, setFiltroAlumno] = useState("ALL");
   const [filtroPeriodo, setFiltroPeriodo] = useState("ALL");
   const [orden, setOrden] = useState("DESC");
 
@@ -199,6 +200,16 @@ export default function Capturar() {
     );
   }, [alumnos, form.grupo]);
 
+  const alumnosParaFiltro = useMemo(() => {
+    if (filtroGrupo === "ALL") {
+      return alumnos;
+    }
+
+    return alumnos.filter(
+      (alumno) => normalizeText(alumno.grupo) === normalizeText(filtroGrupo)
+    );
+  }, [alumnos, filtroGrupo]);
+
   const alumnoSeleccionado = useMemo(() => {
     const email = normalizeEmail(form.alumnoEmail);
 
@@ -222,9 +233,16 @@ export default function Capturar() {
       );
     }
 
+    if (filtroAlumno !== "ALL") {
+      data = data.filter(
+        (item) => normalizeEmail(item.alumnoEmail) === normalizeEmail(filtroAlumno)
+      );
+    }
+
     if (filtroPeriodo !== "ALL") {
       data = data.filter(
-        (item) => normalizeText(item.periodo || "Final") === normalizeText(filtroPeriodo)
+        (item) =>
+          normalizeText(item.periodo || "Final") === normalizeText(filtroPeriodo)
       );
     }
 
@@ -236,7 +254,14 @@ export default function Capturar() {
     });
 
     return data;
-  }, [calificaciones, filtroMateria, filtroGrupo, filtroPeriodo, orden]);
+  }, [
+    calificaciones,
+    filtroMateria,
+    filtroGrupo,
+    filtroAlumno,
+    filtroPeriodo,
+    orden,
+  ]);
 
   const alumnosEvaluados = useMemo(() => {
     return new Set(
@@ -276,6 +301,11 @@ export default function Capturar() {
         [name]: value,
       };
     });
+  };
+
+  const updateFiltroGrupo = (value) => {
+    setFiltroGrupo(value);
+    setFiltroAlumno("ALL");
   };
 
   const validateForm = () => {
@@ -643,7 +673,7 @@ export default function Capturar() {
               Grupo
               <select
                 value={filtroGrupo}
-                onChange={(event) => setFiltroGrupo(event.target.value)}
+                onChange={(event) => updateFiltroGrupo(event.target.value)}
                 disabled={loading}
               >
                 <option value="ALL">Todos los grupos</option>
@@ -651,6 +681,23 @@ export default function Capturar() {
                 {grupos.map((grupo) => (
                   <option key={grupo} value={grupo}>
                     {grupo}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Alumno
+              <select
+                value={filtroAlumno}
+                onChange={(event) => setFiltroAlumno(event.target.value)}
+                disabled={loading || !alumnosParaFiltro.length}
+              >
+                <option value="ALL">Todos los alumnos</option>
+
+                {alumnosParaFiltro.map((alumno) => (
+                  <option key={alumno.email} value={alumno.email}>
+                    {alumno.name} · {alumno.boleta || "Sin boleta"}
                   </option>
                 ))}
               </select>
@@ -689,6 +736,11 @@ export default function Capturar() {
 
         <section className="card">
           <h2>Registros</h2>
+
+          <p className="msg">
+            Mostrando {calificacionesFiltradas.length} de{" "}
+            {calificaciones.length} registro(s).
+          </p>
 
           <div className="lista">
             {calificacionesFiltradas.map((calificacion) => (
@@ -739,7 +791,11 @@ export default function Capturar() {
                     </>
                   ) : (
                     <>
-                      <span className={`badge ${gradeClass(calificacion.calificacion)}`}>
+                      <span
+                        className={`badge ${gradeClass(
+                          calificacion.calificacion
+                        )}`}
+                      >
                         {fmtGrade(calificacion.calificacion)}
                       </span>
 
@@ -769,7 +825,9 @@ export default function Capturar() {
 
             {!calificacionesFiltradas.length && (
               <p className="msg">
-                {loading ? "Cargando..." : "Sin registros"}
+                {loading
+                  ? "Cargando..."
+                  : "No hay registros con los filtros seleccionados."}
               </p>
             )}
           </div>

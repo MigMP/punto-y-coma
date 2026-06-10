@@ -50,6 +50,7 @@ function notificationLabel(type) {
 
     calificacion_creada: "Calificación registrada",
     calificacion_editada: "Calificación actualizada",
+    calificacion_actualizada: "Calificación actualizada",
     calificacion_eliminada: "Calificación eliminada",
 
     materia_creada: "Materia creada",
@@ -88,6 +89,7 @@ export default function Notificaciones() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deletingRead, setDeletingRead] = useState(false);
 
   useEffect(() => {
     document.body.classList.add("app-bg");
@@ -165,7 +167,7 @@ export default function Notificaciones() {
   }, [notificaciones]);
 
   const markAsRead = async (notification) => {
-    if (notification.read || saving) return;
+    if (notification.read || saving || deletingRead) return;
 
     try {
       setSaving(true);
@@ -231,6 +233,44 @@ export default function Notificaciones() {
     }
   };
 
+  const deleteReadNotifications = async () => {
+    if (!resumen.read) {
+      showToast({
+        type: "info",
+        title: "Sin notificaciones leídas",
+        message: "No tienes notificaciones leídas para eliminar.",
+      });
+      return;
+    }
+
+    try {
+      setDeletingRead(true);
+
+      const result = await apiJSON("/notificaciones/read", {
+        token,
+        method: "DELETE",
+      });
+
+      showToast({
+        type: "success",
+        title: "Notificaciones eliminadas",
+        message: `Se eliminaron ${
+          result.deleted || resumen.read || 0
+        } notificación(es) leída(s).`,
+      });
+
+      await loadNotifications();
+    } catch (error) {
+      showToast({
+        type: "error",
+        title: "No se pudieron eliminar",
+        message: error.message || "Intenta nuevamente.",
+      });
+    } finally {
+      setDeletingRead(false);
+    }
+  };
+
   const copySummary = async () => {
     const lines = [
       "Notificaciones - Punto y Coma",
@@ -287,7 +327,7 @@ export default function Notificaciones() {
             type="button"
             className="btn-ghost"
             onClick={loadNotifications}
-            disabled={loading || saving}
+            disabled={loading || saving || deletingRead}
           >
             {loading ? "Cargando..." : "Actualizar"}
           </button>
@@ -308,8 +348,8 @@ export default function Notificaciones() {
             </div>
 
             <div className="kpi">
-              <div className="kpiTitle">Tareas</div>
-              <div className="kpiValue">{resumen.tareas}</div>
+              <div className="kpiTitle">Leídas</div>
+              <div className="kpiValue">{resumen.read}</div>
             </div>
 
             <div className="kpi">
@@ -329,7 +369,7 @@ export default function Notificaciones() {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Título, mensaje o tipo"
-                disabled={loading}
+                disabled={loading || deletingRead}
               />
             </label>
 
@@ -340,7 +380,7 @@ export default function Notificaciones() {
                 onChange={(event) =>
                   setUnreadOnly(event.target.value === "UNREAD")
                 }
-                disabled={loading}
+                disabled={loading || deletingRead}
               >
                 <option value="ALL">Todas</option>
                 <option value="UNREAD">No leídas</option>
@@ -353,7 +393,7 @@ export default function Notificaciones() {
               type="button"
               className="btn-ghost"
               onClick={copySummary}
-              disabled={loading || !notificacionesFiltradas.length}
+              disabled={loading || deletingRead || !notificacionesFiltradas.length}
             >
               Copiar resumen
             </button>
@@ -362,12 +402,25 @@ export default function Notificaciones() {
               type="button"
               className="btn-ghost"
               onClick={markAllAsRead}
-              disabled={loading || saving || !resumen.unread}
+              disabled={loading || saving || deletingRead || !resumen.unread}
             >
-              Marcar todas como leídas
+              {saving ? "Marcando..." : "Marcar todas como leídas"}
             </button>
 
-            <button type="button" onClick={() => window.print()}>
+            <button
+              type="button"
+              className="btn-del"
+              onClick={deleteReadNotifications}
+              disabled={loading || saving || deletingRead || !resumen.read}
+            >
+              {deletingRead ? "Eliminando..." : "Eliminar leídas"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => window.print()}
+              disabled={loading || saving || deletingRead}
+            >
               Imprimir
             </button>
           </div>
@@ -407,7 +460,7 @@ export default function Notificaciones() {
                         type="button"
                         className="btn-ghost"
                         onClick={() => markAsRead(item)}
-                        disabled={saving || loading}
+                        disabled={saving || loading || deletingRead}
                       >
                         Marcar leída
                       </button>

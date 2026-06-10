@@ -2,7 +2,12 @@
 
 const express = require("express");
 
-const { getCollection, saveDocument } = require("../db/firestoreStore");
+const {
+  getCollection,
+  saveDocument,
+  deleteDocument,
+} = require("../db/firestoreStore");
+
 const { auth } = require("../middlewares/auth");
 
 const router = express.Router();
@@ -44,10 +49,6 @@ function canSeeNotification(req, notification) {
   const targetEmail = normalizeEmail(notification.targetEmail);
   const targetRole = normalizeRole(notification.targetRole);
 
-  /*
-    Si no tiene targetEmail ni targetRole, se interpreta como notificación general.
-    Esto permite mostrar avisos globales para todos los usuarios.
-  */
   if (!targetEmail && !targetRole) return true;
 
   if (targetEmail && targetEmail === userEmail) return true;
@@ -102,9 +103,7 @@ router.patch("/notificaciones/:id/read", auth, async (req, res) => {
       });
     }
 
-    const notification = notificaciones.find(
-      (item) => Number(item.id) === id
-    );
+    const notification = notificaciones.find((item) => Number(item.id) === id);
 
     if (!notification) {
       return res.status(404).json({
@@ -172,6 +171,32 @@ router.patch("/notificaciones/read-all", auth, async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       error: "No se pudieron marcar las notificaciones como leídas",
+      detalle: error.message,
+    });
+  }
+});
+
+router.delete("/notificaciones/read", auth, async (req, res) => {
+  try {
+    const notificaciones = await getCollection("notificaciones");
+
+    const leidasVisibles = notificaciones.filter(
+      (notification) => canSeeNotification(req, notification) && notification.read
+    );
+
+    await Promise.all(
+      leidasVisibles.map((notification) =>
+        deleteDocument("notificaciones", notification.id)
+      )
+    );
+
+    return res.json({
+      ok: true,
+      deleted: leidasVisibles.length,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: "No se pudieron eliminar las notificaciones leídas",
       detalle: error.message,
     });
   }
