@@ -1142,3 +1142,100 @@ html.dark .kpiValue {
     font-size: 2rem;
   }
 }
+/* FIX: botones del navbar en modo oscuro */
+
+html.dark .nav a,
+html.dark .nav button,
+html.dark .navLink,
+html.dark .navItem,
+html.dark .navbar a,
+html.dark .navbar button,
+body.theme-dark .nav a,
+body.theme-dark .nav button,
+body.theme-dark .navLink,
+body.theme-dark .navItem,
+body.theme-dark .navbar a,
+body.theme-dark .navbar button,
+body.dark .nav a,
+body.dark .nav button,
+body.dark .navLink,
+body.dark .navItem,
+body.dark .navbar a,
+body.dark .navbar button {
+  color: #e5e7eb !important;
+}
+
+html.dark .nav a:hover,
+html.dark .nav button:hover,
+html.dark .navLink:hover,
+html.dark .navItem:hover,
+html.dark .navbar a:hover,
+html.dark .navbar button:hover,
+body.theme-dark .nav a:hover,
+body.theme-dark .nav button:hover,
+body.theme-dark .navLink:hover,
+body.theme-dark .navItem:hover,
+body.theme-dark .navbar a:hover,
+body.theme-dark .navbar button:hover,
+body.dark .nav a:hover,
+body.dark .nav button:hover,
+body.dark .navLink:hover,
+body.dark .navItem:hover,
+body.dark .navbar a:hover,
+body.dark .navbar button:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Botón activo tipo "Inicio" */
+html.dark .nav a.active,
+html.dark .nav button.active,
+html.dark .navLink.active,
+html.dark .navItem.active,
+html.dark .navbar a.active,
+html.dark .navbar button.active,
+html.dark a[aria-current="page"],
+body.theme-dark .nav a.active,
+body.theme-dark .nav button.active,
+body.theme-dark .navLink.active,
+body.theme-dark .navItem.active,
+body.theme-dark .navbar a.active,
+body.theme-dark .navbar button.active,
+body.theme-dark a[aria-current="page"],
+body.dark .nav a.active,
+body.dark .nav button.active,
+body.dark .navLink.active,
+body.dark .navItem.active,
+body.dark .navbar a.active,
+body.dark .navbar button.active,
+body.dark a[aria-current="page"] {
+  background: linear-gradient(135deg, #0f766e, #155e75) !important;
+  color: #ffffff !important;
+  border-color: rgba(94, 234, 212, 0.35) !important;
+  box-shadow: 0 10px 28px rgba(20, 184, 166, 0.18) !important;
+}
+
+/* Por si el texto del botón activo viene dentro de span */
+html.dark .nav a.active *,
+html.dark .nav button.active *,
+html.dark .navLink.active *,
+html.dark .navItem.active *,
+html.dark .navbar a.active *,
+html.dark .navbar button.active *,
+html.dark a[aria-current="page"] *,
+body.theme-dark .nav a.active *,
+body.theme-dark .nav button.active *,
+body.theme-dark .navLink.active *,
+body.theme-dark .navItem.active *,
+body.theme-dark .navbar a.active *,
+body.theme-dark .navbar button.active *,
+body.theme-dark a[aria-current="page"] *,
+body.dark .nav a.active *,
+body.dark .nav button.active *,
+body.dark .navLink.active *,
+body.dark .navItem.active *,
+body.dark .navbar a.active *,
+body.dark .navbar button.active *,
+body.dark a[aria-current="page"] * {
+  color: #ffffff !important;
+}

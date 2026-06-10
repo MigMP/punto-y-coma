@@ -208,3 +208,81 @@ textarea:focus-visible {
     font-size: 22px;
   }
 }
+/* FIX: títulos y textos en modo oscuro */
+
+html.dark h1,
+html.dark h2,
+html.dark h3,
+html.dark .hero h1,
+html.dark .heroTitle,
+html.dark .pageTitle,
+html.dark .card h1,
+html.dark .card h2,
+html.dark .card h3,
+body.theme-dark h1,
+body.theme-dark h2,
+body.theme-dark h3,
+body.theme-dark .hero h1,
+body.theme-dark .heroTitle,
+body.theme-dark .pageTitle,
+body.theme-dark .card h1,
+body.theme-dark .card h2,
+body.theme-dark .card h3,
+body.dark h1,
+body.dark h2,
+body.dark h3,
+body.dark .hero h1,
+body.dark .heroTitle,
+body.dark .pageTitle,
+body.dark .card h1,
+body.dark .card h2,
+body.dark .card h3 {
+  color: #f8fafc !important;
+}
+
+html.dark .msg,
+html.dark .muted,
+html.dark .card p,
+html.dark .hero p,
+body.theme-dark .msg,
+body.theme-dark .muted,
+body.theme-dark .card p,
+body.theme-dark .hero p,
+body.dark .msg,
+body.dark .muted,
+body.dark .card p,
+body.dark .hero p {
+  color: #cbd5e1 !important;
+}
+
+html.dark .badge,
+body.theme-dark .badge,
+body.dark .badge {
+  color: inherit;
+}
+
+html.dark .card,
+body.theme-dark .card,
+body.dark .card {
+  background: #111827 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+html.dark .kpi,
+body.theme-dark .kpi,
+body.dark .kpi {
+  background: #0f172a !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+html.dark .kpiTitle,
+body.theme-dark .kpiTitle,
+body.dark .kpiTitle {
+  color: #94a3b8 !important;
+}
+
+html.dark .kpiValue,
+body.theme-dark .kpiValue,
+body.dark .kpiValue {
+  color: #f8fafc !important;
+}
