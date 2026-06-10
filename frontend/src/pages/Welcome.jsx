@@ -1,8 +1,34 @@
-import React from "react";
+// Archivo: frontend/src/pages/Welcome.jsx
+
+import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
+
+import { useAuth } from "../state/AuthContext.jsx";
+
 import "../styles/welcome.css";
 
+function getDefaultPathByRole(role) {
+  if (role === "alumno") return "/plan";
+  if (role === "maestro") return "/capturar";
+  if (role === "administrador") return "/admin";
+
+  return "/app";
+}
+
+function getUserName(user) {
+  return user?.nombre || user?.name || user?.email || "Usuario";
+}
+
 export default function Welcome() {
+  const { user, token: ctxToken } = useAuth();
+
+  const token = useMemo(() => {
+    return ctxToken || localStorage.getItem("token") || "";
+  }, [ctxToken]);
+
+  const isLoggedIn = Boolean(token);
+  const panelPath = getDefaultPathByRole(user?.role);
+
   return (
     <main className="welcomePage">
       <section className="welcomeShell">
@@ -39,28 +65,43 @@ export default function Welcome() {
 
         <div className="welcomeRight">
           <div className="accessBlock">
-            <span className="accessLabel">Comenzar</span>
+            <span className="accessLabel">
+              {isLoggedIn ? "Sesión activa" : "Comenzar"}
+            </span>
 
-            <h2>Tu acceso a la plataforma</h2>
+            <h2>
+              {isLoggedIn
+                ? `Hola, ${getUserName(user)}`
+                : "Tu acceso a la plataforma"}
+            </h2>
 
             <p>
-              Inicia sesión o crea una cuenta para revisar tu avance,
-              administrar materias y acceder a las funciones disponibles según
-              tu rol.
+              {isLoggedIn
+                ? "Ya tienes una sesión iniciada. Puedes volver a tu panel para continuar usando las funciones disponibles según tu rol."
+                : "Inicia sesión o crea una cuenta para revisar tu avance, administrar materias y acceder a las funciones disponibles según tu rol."}
             </p>
 
             <div className="accessActions">
-              <Link to="/login" className="accessButton primary">
-                Iniciar sesión
-              </Link>
+              {isLoggedIn ? (
+                <Link to={panelPath} className="accessButton primary">
+                  Ir a mi panel
+                </Link>
+              ) : (
+                <>
+                  <Link to="/login" className="accessButton primary">
+                    Iniciar sesión
+                  </Link>
 
-              <Link to="/register" className="accessButton secondary">
-                Crear cuenta
-              </Link>
+                  <Link to="/register" className="accessButton secondary">
+                    Crear cuenta
+                  </Link>
+                </>
+              )}
             </div>
 
             <div className="infoCard">
               <strong>Funciones principales</strong>
+
               <p>
                 Diseñada para alumnos, maestros y administradores. Accede a
                 calificaciones, tareas, reportes y notificaciones desde un solo
@@ -70,6 +111,7 @@ export default function Welcome() {
 
             <div className="infoCard">
               <strong>Acceso recomendado</strong>
+
               <p>
                 Usa tu correo institucional para una mejor experiencia dentro de
                 la plataforma.

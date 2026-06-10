@@ -1,3 +1,5 @@
+// Archivo: backend/src/routes/assignments.routes.js
+
 const express = require("express");
 
 const {
@@ -12,8 +14,20 @@ const { ROLES } = require("../utils/roles");
 
 const router = express.Router();
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function normalizeEmail(value) {
   return String(value || "").trim().toLowerCase();
+}
+
+function parsePositiveId(value) {
+  const id = Number(value);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    return null;
+  }
+
+  return id;
 }
 
 function findMateria(materias, materiaId) {
@@ -26,7 +40,8 @@ function findMaestro(users, email) {
   return users.find(
     (user) =>
       normalizeEmail(user.email) === normalizedEmail &&
-      user.role === ROLES.MAESTRO
+      user.role === ROLES.MAESTRO &&
+      (!user.status || user.status === "active")
   );
 }
 
@@ -39,6 +54,24 @@ function withDetails({ materias, users }, asignacion) {
     materiaNombre: materia?.nombre || "(materia no encontrada)",
     maestroNombre: maestro?.name || "(maestro no encontrado)",
   };
+}
+
+function sortAssignments(items) {
+  return [...items].sort((a, b) => {
+    const materiaCompare = String(a.materiaNombre || "").localeCompare(
+      String(b.materiaNombre || ""),
+      "es",
+      { sensitivity: "base" }
+    );
+
+    if (materiaCompare !== 0) return materiaCompare;
+
+    return String(a.maestroNombre || "").localeCompare(
+      String(b.maestroNombre || ""),
+      "es",
+      { sensitivity: "base" }
+    );
+  });
 }
 
 async function createActivity(req, data = {}) {
@@ -66,6 +99,28 @@ async function createActivity(req, data = {}) {
   return item;
 }
 
+async function createNotification(data = {}) {
+  const notificaciones = await getCollection("notificaciones");
+  const now = new Date().toISOString();
+
+  const item = {
+    id: nextId(notificaciones),
+    type: data.type || "info",
+    title: data.title || "Nueva notificación",
+    message: data.message || "",
+    targetRole: data.targetRole || "",
+    targetEmail: normalizeEmail(data.targetEmail || ""),
+    entity: data.entity || "",
+    entityId: data.entityId || null,
+    read: false,
+    createdAt: now,
+  };
+
+  await saveDocument("notificaciones", item);
+
+  return item;
+}
+
 router.get("/asignaciones", auth, requireRole(ROLES.ADMIN), async (req, res) => {
   try {
     const [asignaciones, materias, users] = await Promise.all([
@@ -74,11 +129,11 @@ router.get("/asignaciones", auth, requireRole(ROLES.ADMIN), async (req, res) => 
       getCollection("users"),
     ]);
 
-    return res.json(
-      asignaciones.map((asignacion) =>
-        withDetails({ materias, users }, asignacion)
-      )
+    const items = asignaciones.map((asignacion) =>
+      withDetails({ materias, users }, asignacion)
     );
+
+    return res.json(sortAssignments(items));
   } catch (error) {
     return res.status(500).json({
       error: "No se pudieron consultar asignaciones",
@@ -95,18 +150,18 @@ router.post("/asignaciones", auth, requireRole(ROLES.ADMIN), async (req, res) =>
       getCollection("users"),
     ]);
 
-    const materiaId = Number(req.body.materiaId);
+    const materiaId = parsePositiveId(req.body.materiaId);
     const maestroEmail = normalizeEmail(req.body.maestroEmail);
 
-    if (!Number.isFinite(materiaId)) {
+    if (!materiaId) {
       return res.status(400).json({
         error: "materiaId inválido",
       });
     }
 
-    if (!maestroEmail) {
+    if (!maestroEmail || !EMAIL_RE.test(maestroEmail)) {
       return res.status(400).json({
-        error: "Correo del maestro obligatorio",
+        error: "Correo del maestro inválido",
       });
     }
 
@@ -122,7 +177,7 @@ router.post("/asignaciones", auth, requireRole(ROLES.ADMIN), async (req, res) =>
 
     if (!maestro) {
       return res.status(404).json({
-        error: "Maestro no encontrado",
+        error: "No existe un maestro activo con ese correo",
       });
     }
 
@@ -158,9 +213,16 @@ router.post("/asignaciones", auth, requireRole(ROLES.ADMIN), async (req, res) =>
       entityId: nueva.id,
     });
 
-    return res.status(201).json(
-      withDetails({ materias, users }, nueva)
-    );
+    await createNotification({
+      type: "asignacion_creada",
+      title: "Nueva materia asignada",
+      message: `Se te asignó la materia ${materia.nombre}.`,
+      targetEmail: maestro.email,
+      entity: "asignacion",
+      entityId: nueva.id,
+    });
+
+    return res.status(201).json(withDetails({ materias, users }, nueva));
   } catch (error) {
     return res.status(500).json({
       error: "No se pudo crear la asignación",
@@ -171,9 +233,9 @@ router.post("/asignaciones", auth, requireRole(ROLES.ADMIN), async (req, res) =>
 
 router.delete("/asignaciones/:id", auth, requireRole(ROLES.ADMIN), async (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const id = parsePositiveId(req.params.id);
 
-    if (!Number.isFinite(id)) {
+    if (!id) {
       return res.status(400).json({
         error: "ID de asignación inválido",
       });
@@ -203,6 +265,15 @@ router.delete("/asignaciones/:id", auth, requireRole(ROLES.ADMIN), async (req, r
       type: "asignacion_eliminada",
       title: "Asignación eliminada",
       description: `Se quitó la materia ${detail.materiaNombre} al maestro ${detail.maestroNombre}.`,
+      entity: "asignacion",
+      entityId: deleted.id,
+    });
+
+    await createNotification({
+      type: "asignacion_eliminada",
+      title: "Materia retirada",
+      message: `Se retiró tu asignación de la materia ${detail.materiaNombre}.`,
+      targetEmail: deleted.maestroEmail,
       entity: "asignacion",
       entityId: deleted.id,
     });

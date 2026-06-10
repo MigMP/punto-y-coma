@@ -1,3 +1,5 @@
+// Archivo: frontend/src/app/App.jsx
+
 import React, { useEffect } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
@@ -24,13 +26,17 @@ import NotFound from "../pages/NotFound.jsx";
 
 import ProtectedRoute from "../components/routing/ProtectedRoute.jsx";
 
+const ALL_ROLES = ["alumno", "maestro", "administrador"];
+const STAFF_ROLES = ["maestro", "administrador"];
+const ADMIN_ROLES = ["administrador"];
+
+const PUBLIC_ROUTES = ["/", "/login", "/register"];
 
 function applyTheme(theme) {
   const normalized = theme === "dark" ? "dark" : "light";
   const root = document.documentElement;
 
   root.dataset.theme = normalized;
-  document.body.datasetTheme = normalized;
   document.body.dataset.theme = normalized;
 
   root.classList.toggle("light", normalized === "light");
@@ -50,38 +56,41 @@ function applyTheme(theme) {
     root.style.setProperty("--border", "rgba(15, 23, 42, 0.12)");
     root.style.setProperty("--surface", "#ffffff");
     root.style.setProperty("--surface-soft", "#f8fafc");
-  } else {
-    root.style.setProperty("--bg", "#020617");
-    root.style.setProperty("--bg2", "#0f172a");
-    root.style.setProperty("--card", "#0f172a");
-    root.style.setProperty("--text", "#f8fafc");
-    root.style.setProperty("--muted", "#94a3b8");
-    root.style.setProperty("--border", "rgba(255, 255, 255, 0.12)");
-    root.style.setProperty("--surface", "#0f172a");
-    root.style.setProperty("--surface-soft", "#1e293b");
+    return;
   }
+
+  root.style.setProperty("--bg", "#020617");
+  root.style.setProperty("--bg2", "#0f172a");
+  root.style.setProperty("--card", "#0f172a");
+  root.style.setProperty("--text", "#f8fafc");
+  root.style.setProperty("--muted", "#94a3b8");
+  root.style.setProperty("--border", "rgba(255, 255, 255, 0.12)");
+  root.style.setProperty("--surface", "#0f172a");
+  root.style.setProperty("--surface-soft", "#1e293b");
 }
 
 function getSavedTheme() {
   return localStorage.getItem("punto_coma_theme") || "light";
 }
 
+function ProtectedPage({ children, allowedRoles }) {
+  return (
+    <ProtectedRoute allowedRoles={allowedRoles}>
+      {children}
+    </ProtectedRoute>
+  );
+}
+
 export default function App() {
   const location = useLocation();
 
   useEffect(() => {
-    const publicRoutes = ["/", "/login", "/register"];
-    const isPublicRoute = publicRoutes.includes(location.pathname);
+    const isPublicRoute = PUBLIC_ROUTES.includes(location.pathname);
 
     document.body.classList.toggle("public-page", isPublicRoute);
     document.body.classList.toggle("app-page", !isPublicRoute);
 
-    if (isPublicRoute) {
-      applyTheme("light");
-      return;
-    }
-
-    applyTheme(getSavedTheme());
+    applyTheme(isPublicRoute ? "light" : getSavedTheme());
   }, [location.pathname]);
 
   return (
@@ -93,144 +102,144 @@ export default function App() {
       <Route
         path="/app"
         element={
-          <ProtectedRoute>
+          <ProtectedPage>
             <Dashboard />
-          </ProtectedRoute>
+          </ProtectedPage>
         }
       />
 
       <Route
         path="/profile"
         element={
-          <ProtectedRoute>
+          <ProtectedPage>
             <Profile />
-          </ProtectedRoute>
+          </ProtectedPage>
         }
       />
 
       <Route
         path="/ajustes"
         element={
-          <ProtectedRoute allowedRoles={["alumno", "maestro", "administrador"]}>
+          <ProtectedPage allowedRoles={ALL_ROLES}>
             <Ajustes />
-          </ProtectedRoute>
+          </ProtectedPage>
         }
       />
 
       <Route
         path="/plan"
         element={
-          <ProtectedRoute allowedRoles={["alumno"]}>
+          <ProtectedPage allowedRoles={["alumno"]}>
             <Plan />
-          </ProtectedRoute>
+          </ProtectedPage>
         }
       />
 
       <Route
         path="/tareas"
         element={
-          <ProtectedRoute allowedRoles={["alumno", "maestro", "administrador"]}>
+          <ProtectedPage allowedRoles={ALL_ROLES}>
             <Tareas />
-          </ProtectedRoute>
+          </ProtectedPage>
         }
       />
 
       <Route
         path="/calendario"
         element={
-          <ProtectedRoute allowedRoles={["alumno", "maestro", "administrador"]}>
+          <ProtectedPage allowedRoles={ALL_ROLES}>
             <Calendario />
-          </ProtectedRoute>
+          </ProtectedPage>
         }
       />
 
       <Route
         path="/recursos"
         element={
-          <ProtectedRoute allowedRoles={["alumno", "maestro", "administrador"]}>
+          <ProtectedPage allowedRoles={ALL_ROLES}>
             <Recursos />
-          </ProtectedRoute>
+          </ProtectedPage>
         }
       />
 
       <Route
         path="/notificaciones"
         element={
-          <ProtectedRoute allowedRoles={["alumno", "maestro", "administrador"]}>
+          <ProtectedPage allowedRoles={ALL_ROLES}>
             <Notificaciones />
-          </ProtectedRoute>
+          </ProtectedPage>
         }
       />
 
       <Route
         path="/capturar"
         element={
-          <ProtectedRoute allowedRoles={["maestro"]}>
+          <ProtectedPage allowedRoles={["maestro"]}>
             <Capturar />
-          </ProtectedRoute>
+          </ProtectedPage>
         }
       />
 
       <Route
         path="/admin"
         element={
-          <ProtectedRoute allowedRoles={["administrador"]}>
+          <ProtectedPage allowedRoles={ADMIN_ROLES}>
             <Admin />
-          </ProtectedRoute>
+          </ProtectedPage>
         }
       />
 
       <Route
         path="/reportes"
         element={
-          <ProtectedRoute allowedRoles={["maestro", "administrador"]}>
+          <ProtectedPage allowedRoles={STAFF_ROLES}>
             <Reportes />
-          </ProtectedRoute>
+          </ProtectedPage>
         }
       />
 
       <Route
         path="/analiticas"
         element={
-          <ProtectedRoute allowedRoles={["maestro", "administrador"]}>
+          <ProtectedPage allowedRoles={STAFF_ROLES}>
             <Analiticas />
-          </ProtectedRoute>
+          </ProtectedPage>
         }
       />
 
       <Route
         path="/alumnos"
         element={
-          <ProtectedRoute allowedRoles={["maestro", "administrador"]}>
+          <ProtectedPage allowedRoles={STAFF_ROLES}>
             <Alumnos />
-          </ProtectedRoute>
+          </ProtectedPage>
         }
       />
 
       <Route
         path="/alumnos/:email"
         element={
-          <ProtectedRoute allowedRoles={["maestro", "administrador"]}>
+          <ProtectedPage allowedRoles={STAFF_ROLES}>
             <AlumnoDetalle />
-          </ProtectedRoute>
+          </ProtectedPage>
         }
       />
 
       <Route
         path="/actividad"
         element={
-          <ProtectedRoute allowedRoles={["administrador"]}>
+          <ProtectedPage allowedRoles={ADMIN_ROLES}>
             <Actividad />
-          </ProtectedRoute>
+          </ProtectedPage>
         }
       />
 
       <Route
         path="/configuracion"
         element={
-          <ProtectedRoute allowedRoles={["administrador"]}>
+          <ProtectedPage allowedRoles={ADMIN_ROLES}>
             <Configuracion />
-          </ProtectedRoute>
+          </ProtectedPage>
         }
       />
 

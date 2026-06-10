@@ -1,7 +1,8 @@
-/* name=frontend/src/styles/welcome.css */
+/* Archivo: frontend/src/styles/welcome.css */
 
 /* =========================
    WELCOME - PUNTO Y COMA
+   Página pública limpia
    ========================= */
 
 :root {
@@ -13,39 +14,42 @@
   --wc-soft: #f8fafc;
   --wc-text: #111827;
   --wc-muted: #64748b;
-  --wc-border: rgba(148, 163, 184, 0.3);
-  --wc-shadow: 0 24px 80px rgba(15, 23, 42, 0.12);
-  --wc-shadow-soft: 0 12px 34px rgba(15, 23, 42, 0.08);
+  --wc-border: rgba(148, 163, 184, 0.24);
+  --wc-shadow: 0 16px 44px rgba(15, 23, 42, 0.08);
+  --wc-shadow-soft: 0 8px 24px rgba(15, 23, 42, 0.055);
 }
+
+/* =========================
+   PAGE
+   ========================= */
 
 .welcomePage {
   min-height: 100vh;
   display: grid;
   place-items: center;
   padding: 24px;
-  background:
-    radial-gradient(900px 420px at 10% 5%, rgba(30, 58, 138, 0.13), transparent 62%),
-    radial-gradient(820px 420px at 92% 10%, rgba(15, 118, 110, 0.12), transparent 58%),
-    linear-gradient(180deg, #f8fafc 0%, var(--wc-bg) 55%, #eef4ff 100%);
   color: var(--wc-text);
+  background:
+    radial-gradient(circle at top left, rgba(30, 58, 138, 0.06), transparent 34%),
+    radial-gradient(circle at top right, rgba(15, 118, 110, 0.055), transparent 32%),
+    linear-gradient(180deg, #f8fafc 0%, var(--wc-bg) 100%);
 }
 
 .welcomeShell {
-  width: min(1180px, 100%);
-  min-height: 650px;
+  width: min(1160px, 100%);
+  min-height: 620px;
   display: grid;
   grid-template-columns: 1.05fr 0.95fr;
-  border-radius: 32px;
-  border: 1px solid var(--wc-border);
-  background: rgba(255, 255, 255, 0.88);
-  box-shadow: var(--wc-shadow);
   overflow: hidden;
-  backdrop-filter: blur(18px);
+  border-radius: 28px;
+  border: 1px solid var(--wc-border);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--wc-shadow);
 }
 
 .welcomeLeft,
 .welcomeRight {
-  padding: clamp(28px, 4vw, 56px);
+  padding: clamp(28px, 4vw, 52px);
 }
 
 .welcomeLeft {
@@ -59,52 +63,54 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background:
-    radial-gradient(560px 280px at 90% 0%, rgba(15, 118, 110, 0.09), transparent 62%),
-    rgba(255, 255, 255, 0.64);
+  background: var(--wc-soft);
 }
 
-/* BRAND */
+/* =========================
+   BRAND
+   ========================= */
 
 .welcomeBrand {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 42px;
+  gap: 15px;
+  margin-bottom: 38px;
 }
 
 .welcomeLogo {
-  width: 58px;
-  height: 58px;
+  width: 56px;
+  height: 56px;
   display: grid;
   place-items: center;
   border-radius: 18px;
-  background: linear-gradient(135deg, var(--wc-primary), var(--wc-secondary));
   color: #ffffff;
-  font-size: 38px;
-  font-weight: 1000;
+  background: linear-gradient(135deg, var(--wc-primary), var(--wc-secondary));
+  box-shadow: 0 10px 24px rgba(30, 58, 138, 0.18);
+  font-size: 35px;
+  font-weight: 900;
   line-height: 1;
-  box-shadow: 0 18px 38px rgba(30, 58, 138, 0.24);
 }
 
 .welcomeBrand strong {
   display: block;
   color: var(--wc-primary-dark);
-  font-size: 1.45rem;
-  font-weight: 1000;
+  font-size: 1.35rem;
+  font-weight: 880;
   line-height: 1.05;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.035em;
 }
 
 .welcomeBrand small {
   display: block;
   margin-top: 5px;
   color: var(--wc-muted);
-  font-size: 0.95rem;
-  font-weight: 750;
+  font-size: 0.92rem;
+  font-weight: 560;
 }
 
-/* LEFT CONTENT */
+/* =========================
+   LEFT CONTENT
+   ========================= */
 
 .welcomeIntro {
   max-width: 620px;
@@ -115,107 +121,113 @@
   display: inline-flex;
   align-items: center;
   width: fit-content;
-  margin-bottom: 20px;
-  padding: 8px 12px;
+  margin-bottom: 18px;
+  padding: 7px 11px;
   border-radius: 999px;
   color: var(--wc-primary);
-  background: rgba(30, 58, 138, 0.08);
-  border: 1px solid rgba(30, 58, 138, 0.12);
-  font-size: 0.8rem;
-  font-weight: 1000;
+  background: rgba(30, 58, 138, 0.07);
+  border: 1px solid rgba(30, 58, 138, 0.13);
+  font-size: 0.76rem;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.07em;
 }
 
 .welcomeIntro h1 {
   margin: 0;
   color: var(--wc-primary-dark);
-  font-size: clamp(4rem, 8vw, 6.4rem);
-  line-height: 0.9;
-  letter-spacing: -0.08em;
-  font-weight: 1000;
+  font-size: clamp(3.6rem, 7.2vw, 5.8rem);
+  line-height: 0.92;
+  letter-spacing: -0.075em;
+  font-weight: 900;
 }
 
 .welcomeIntro p {
-  max-width: 620px;
-  margin: 26px 0 0;
+  max-width: 600px;
+  margin: 24px 0 0;
   color: #475569;
-  font-size: 1.12rem;
-  line-height: 1.75;
-  font-weight: 600;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  font-weight: 520;
 }
 
 .welcomeFeatures {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 36px;
+  gap: 10px;
+  margin-top: 34px;
   max-width: 620px;
 }
 
 .welcomeFeatures span {
-  min-height: 48px;
+  min-height: 46px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 16px;
+  padding: 0 15px;
   border-radius: 999px;
   color: var(--wc-primary-dark);
-  background: rgba(255, 255, 255, 0.82);
+  background: #ffffff;
   border: 1px solid var(--wc-border);
-  box-shadow: var(--wc-shadow-soft);
+  box-shadow: none;
   text-align: center;
-  font-size: 0.95rem;
-  font-weight: 900;
+  font-size: 0.92rem;
+  font-weight: 720;
 }
 
-/* RIGHT CONTENT */
+/* =========================
+   RIGHT CONTENT
+   ========================= */
 
 .accessBlock {
-  width: min(440px, 100%);
+  width: min(430px, 100%);
 }
 
 .accessLabel {
   margin-bottom: 14px;
+  padding: 0;
+  color: var(--wc-secondary);
   background: transparent;
   border: 0;
-  padding: 0;
-  color: #0f766e;
 }
 
 .accessBlock h2 {
   margin: 0;
   color: var(--wc-primary-dark);
-  font-size: clamp(2.3rem, 4vw, 3.7rem);
+  font-size: clamp(2.2rem, 4vw, 3.45rem);
   line-height: 1;
-  letter-spacing: -0.07em;
-  font-weight: 1000;
+  letter-spacing: -0.065em;
+  font-weight: 900;
 }
 
 .accessBlock > p {
-  margin: 22px 0 0;
+  margin: 20px 0 0;
   color: #475569;
-  font-size: 1.05rem;
-  line-height: 1.65;
-  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.62;
+  font-weight: 520;
 }
 
 .accessActions {
   display: grid;
-  gap: 14px;
-  margin-top: 30px;
+  gap: 12px;
+  margin-top: 28px;
 }
 
 .accessButton {
-  min-height: 58px;
+  min-height: 56px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 16px;
+  border-radius: 15px;
   text-decoration: none;
-  font-size: 1.02rem;
-  font-weight: 1000;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  font-size: 1rem;
+  font-weight: 820;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    background 0.16s ease,
+    border-color 0.16s ease;
 }
 
 .accessButton:hover {
@@ -225,29 +237,34 @@
 .accessButton.primary {
   color: #ffffff;
   background: linear-gradient(135deg, var(--wc-primary), var(--wc-secondary));
-  box-shadow: 0 18px 42px rgba(30, 58, 138, 0.25);
+  box-shadow: 0 12px 28px rgba(30, 58, 138, 0.2);
 }
 
 .accessButton.primary:hover {
-  box-shadow: 0 22px 52px rgba(30, 58, 138, 0.32);
+  box-shadow: 0 16px 34px rgba(30, 58, 138, 0.24);
 }
 
 .accessButton.secondary {
   color: var(--wc-primary);
   background: #ffffff;
-  border: 1px solid rgba(30, 58, 138, 0.22);
-  box-shadow: var(--wc-shadow-soft);
+  border: 1px solid rgba(30, 58, 138, 0.2);
+  box-shadow: none;
 }
 
 .accessButton.secondary:hover {
   background: #f8fafc;
+  border-color: rgba(30, 58, 138, 0.28);
 }
+
+/* =========================
+   INFO CARD
+   ========================= */
 
 .infoCard {
   margin-top: 18px;
-  padding: 18px 20px;
-  border-radius: 20px;
-  background: rgba(248, 250, 252, 0.88);
+  padding: 17px 18px;
+  border-radius: 18px;
+  background: #ffffff;
   border: 1px solid var(--wc-border);
 }
 
@@ -255,43 +272,46 @@
   display: block;
   margin-bottom: 8px;
   color: var(--wc-primary-dark);
-  font-size: 1.05rem;
-  font-weight: 1000;
+  font-size: 1rem;
+  font-weight: 820;
 }
 
 .infoCard p {
   margin: 0;
   color: #475569;
-  font-size: 0.98rem;
+  font-size: 0.95rem;
   line-height: 1.55;
-  font-weight: 600;
+  font-weight: 520;
 }
 
 .welcomeFooter {
   margin-top: 22px;
   color: #64748b;
-  font-size: 0.92rem;
-  font-weight: 700;
+  font-size: 0.9rem;
+  font-weight: 560;
 }
 
-/* PUBLIC PAGE PROTECTION */
+/* =========================
+   PROTECCIÓN PÁGINA PÚBLICA
+   Mantiene welcome clara aunque la app tenga modo oscuro
+   ========================= */
 
 body.public-page .welcomePage,
 html.dark body.public-page .welcomePage,
 body.theme-dark.public-page .welcomePage {
+  color: var(--wc-text);
   background:
-    radial-gradient(900px 420px at 10% 5%, rgba(30, 58, 138, 0.13), transparent 62%),
-    radial-gradient(820px 420px at 92% 10%, rgba(15, 118, 110, 0.12), transparent 58%),
-    linear-gradient(180deg, #f8fafc 0%, var(--wc-bg) 55%, #eef4ff 100%) !important;
-  color: var(--wc-text) !important;
+    radial-gradient(circle at top left, rgba(30, 58, 138, 0.06), transparent 34%),
+    radial-gradient(circle at top right, rgba(15, 118, 110, 0.055), transparent 32%),
+    linear-gradient(180deg, #f8fafc 0%, var(--wc-bg) 100%);
 }
 
 body.public-page .welcomeShell,
 html.dark body.public-page .welcomeShell,
 body.theme-dark.public-page .welcomeShell {
-  background: rgba(255, 255, 255, 0.88) !important;
-  color: var(--wc-text) !important;
-  border-color: var(--wc-border) !important;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--wc-text);
+  border-color: var(--wc-border);
 }
 
 body.public-page .welcomeIntro h1,
@@ -302,7 +322,7 @@ html.dark body.public-page .welcomeIntro h1,
 html.dark body.public-page .accessBlock h2,
 html.dark body.public-page .welcomeBrand strong,
 html.dark body.public-page .infoCard strong {
-  color: var(--wc-primary-dark) !important;
+  color: var(--wc-primary-dark);
 }
 
 body.public-page .welcomeIntro p,
@@ -315,10 +335,12 @@ html.dark body.public-page .accessBlock > p,
 html.dark body.public-page .welcomeBrand small,
 html.dark body.public-page .infoCard p,
 html.dark body.public-page .welcomeFooter {
-  color: #475569 !important;
+  color: #475569;
 }
 
-/* RESPONSIVE */
+/* =========================
+   RESPONSIVE
+   ========================= */
 
 @media (max-width: 900px) {
   .welcomeShell {
@@ -346,7 +368,7 @@ html.dark body.public-page .welcomeFooter {
 
   .welcomeShell {
     min-height: calc(100vh - 28px);
-    border-radius: 24px;
+    border-radius: 22px;
   }
 
   .welcomeLeft,
@@ -358,8 +380,19 @@ html.dark body.public-page .welcomeFooter {
     margin-bottom: 30px;
   }
 
+  .welcomeLogo {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    font-size: 32px;
+  }
+
   .welcomeIntro h1 {
-    font-size: clamp(3.2rem, 18vw, 5rem);
+    font-size: clamp(3.1rem, 17vw, 4.7rem);
+  }
+
+  .welcomeIntro p {
+    font-size: 1rem;
   }
 
   .welcomeFeatures {
@@ -367,6 +400,10 @@ html.dark body.public-page .welcomeFooter {
   }
 
   .accessBlock h2 {
-    font-size: clamp(2rem, 12vw, 3rem);
+    font-size: clamp(2rem, 12vw, 2.8rem);
+  }
+
+  .accessButton {
+    min-height: 52px;
   }
 }

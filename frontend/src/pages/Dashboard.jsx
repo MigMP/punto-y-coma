@@ -1,14 +1,31 @@
-import React, { useEffect, useMemo, useState } from "react";
+// Archivo: frontend/src/pages/Dashboard.jsx
+
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+
 import NavBar from "../components/layout/NavBar.jsx";
 import { useAuth } from "../state/AuthContext.jsx";
 import { apiJSON } from "../services/api.js";
 import { useToast } from "../components/feedback/ToastProvider.jsx";
 import { computeInsights } from "../features/study/studyCoach.js";
+
 import "../styles/dashboard.css";
 import "../styles/coach.css";
 
+function toArray(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.results)) return data.results;
+
+  return [];
+}
+
 function fmt(value) {
+  if (value === null || value === undefined || value === "") {
+    return "—";
+  }
+
   const n = Number(value);
   return Number.isFinite(n) ? n.toFixed(2) : "—";
 }
@@ -26,17 +43,23 @@ function roleLabel(role) {
 function formatDate(value) {
   if (!value) return "Sin fecha";
 
-  try {
-    return new Intl.DateTimeFormat("es-MX", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date(value));
-  } catch {
-    return value;
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Sin fecha";
   }
+
+  return new Intl.DateTimeFormat("es-MX", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 }
 
 function gradeTone(value) {
+  if (value === null || value === undefined || value === "" || value === "—") {
+    return "";
+  }
+
   const n = Number(value);
 
   if (!Number.isFinite(n)) return "";
@@ -49,13 +72,19 @@ function gradeTone(value) {
 function statusLabel(status) {
   if (status === "en_progreso") return "En progreso";
   if (status === "completada") return "Completada";
+
   return "Pendiente";
 }
 
 function statusTone(status) {
   if (status === "completada") return "ok";
   if (status === "en_progreso") return "warn";
+
   return "";
+}
+
+function getUserName(user) {
+  return user?.nombre || user?.name || user?.email || "Usuario";
 }
 
 export default function Dashboard() {
@@ -82,10 +111,18 @@ export default function Dashboard() {
 
   useEffect(() => {
     document.body.classList.add("app-bg");
-    return () => document.body.classList.remove("app-bg");
+
+    return () => {
+      document.body.classList.remove("app-bg");
+    };
   }, []);
 
-  const loadDashboard = async () => {
+  const loadDashboard = useCallback(async () => {
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -105,12 +142,12 @@ export default function Dashboard() {
         apiJSON("/recursos", { token }),
       ]);
 
-      setMaterias(Array.isArray(materiasData) ? materiasData : []);
-      setCalificaciones(Array.isArray(calificacionesData) ? calificacionesData : []);
-      setTareas(Array.isArray(tareasData) ? tareasData : []);
-      setNotificaciones(Array.isArray(notificacionesData) ? notificacionesData : []);
-      setCalendario(Array.isArray(calendarioData) ? calendarioData : []);
-      setRecursos(Array.isArray(recursosData) ? recursosData : []);
+      setMaterias(toArray(materiasData));
+      setCalificaciones(toArray(calificacionesData));
+      setTareas(toArray(tareasData));
+      setNotificaciones(toArray(notificacionesData));
+      setCalendario(toArray(calendarioData));
+      setRecursos(toArray(recursosData));
 
       if (isAdmin) {
         const [maestrosData, asignacionesData] = await Promise.all([
@@ -118,8 +155,11 @@ export default function Dashboard() {
           apiJSON("/asignaciones", { token }),
         ]);
 
-        setMaestros(Array.isArray(maestrosData) ? maestrosData : []);
-        setAsignaciones(Array.isArray(asignacionesData) ? asignacionesData : []);
+        setMaestros(toArray(maestrosData));
+        setAsignaciones(toArray(asignacionesData));
+      } else {
+        setMaestros([]);
+        setAsignaciones([]);
       }
     } catch (error) {
       showToast({
@@ -130,14 +170,15 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, isAdmin, showToast]);
 
   useEffect(() => {
     loadDashboard();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadDashboard]);
 
-  const insights = useMemo(() => computeInsights(calificaciones), [calificaciones]);
+  const insights = useMemo(() => {
+    return computeInsights(calificaciones);
+  }, [calificaciones]);
 
   const promedioGeneral = Number.isFinite(insights.overall)
     ? insights.overall
@@ -169,7 +210,12 @@ export default function Dashboard() {
 
   const proximosEventos = useMemo(() => {
     return [...calendario]
-      .sort((a, b) => new Date(a.startAt || 0).getTime() - new Date(b.startAt || 0).getTime())
+      .sort((a, b) => {
+        const dateA = new Date(a.startAt || 0).getTime();
+        const dateB = new Date(b.startAt || 0).getTime();
+
+        return dateA - dateB;
+      })
       .slice(0, 3);
   }, [calendario]);
 
@@ -178,6 +224,7 @@ export default function Dashboard() {
       .sort((a, b) => {
         const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
         const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+
         return dateB - dateA;
       })
       .slice(0, 3);
@@ -185,19 +232,26 @@ export default function Dashboard() {
 
   const recursosRecientes = useMemo(() => {
     return [...recursos]
-      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      .sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+
+        return dateB - dateA;
+      })
       .slice(0, 3);
   }, [recursos]);
 
   const title = useMemo(() => {
     if (isAdmin) return "Centro de administración";
     if (isMaestro) return "Panel docente";
+
     return "Panel académico";
   }, [isAdmin, isMaestro]);
 
   const subtitle = useMemo(() => {
     if (isAdmin) return "Control general del sistema académico.";
     if (isMaestro) return "Seguimiento, calificaciones y apoyo para tus alumnos.";
+
     return "Tu resumen académico, tareas y recursos importantes.";
   }, [isAdmin, isMaestro]);
 
@@ -301,8 +355,10 @@ export default function Dashboard() {
     for (const task of tareasRecientes) {
       items.push({
         id: `tarea-${task.id}`,
-        title: task.titulo,
-        description: `${task.materiaNombre || "Materia"} · ${statusLabel(task.status)}`,
+        title: task.titulo || "Tarea sin título",
+        description: `${task.materiaNombre || "Materia"} · ${statusLabel(
+          task.status
+        )}`,
         badge: "Tarea",
         tone: statusTone(task.status),
         to: "/tareas",
@@ -312,8 +368,10 @@ export default function Dashboard() {
     for (const event of proximosEventos) {
       items.push({
         id: `evento-${event.id}`,
-        title: event.title,
-        description: `${formatDate(event.startAt)} · ${event.materiaNombre || "General"}`,
+        title: event.title || "Evento sin título",
+        description: `${formatDate(event.startAt)} · ${
+          event.materiaNombre || "General"
+        }`,
         badge: "Evento",
         tone: "",
         to: "/calendario",
@@ -323,7 +381,7 @@ export default function Dashboard() {
     for (const resource of recursosRecientes) {
       items.push({
         id: `recurso-${resource.id}`,
-        title: resource.title,
+        title: resource.title || "Recurso sin título",
         description: resource.materiaNombre || "General",
         badge: "Recurso",
         tone: "ok",
@@ -342,13 +400,20 @@ export default function Dashboard() {
         <section className="card row-between">
           <div>
             <h1>{title}</h1>
+
             <p className="msg">
-              {user?.name || "Usuario"} · {roleLabel(user?.role)}
+              {getUserName(user)} · {roleLabel(user?.role)}
             </p>
+
             <p className="msg">{subtitle}</p>
           </div>
 
-          <button type="button" className="btn-ghost" onClick={loadDashboard}>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={loadDashboard}
+            disabled={loading}
+          >
             {loading ? "Cargando..." : "Actualizar"}
           </button>
         </section>
@@ -360,7 +425,12 @@ export default function Dashboard() {
             {mainStats.map((item) => (
               <div className="kpi" key={item.label}>
                 <div className="kpiTitle">{item.label}</div>
-                <div className={`kpiValue ${item.label === "Promedio" ? gradeTone(item.value) : ""}`}>
+
+                <div
+                  className={`kpiValue ${
+                    item.label === "Promedio" ? gradeTone(item.value) : ""
+                  }`}
+                >
                   {item.value}
                 </div>
               </div>
@@ -406,7 +476,9 @@ export default function Dashboard() {
 
             {!recientes.length && (
               <p className="msg">
-                {loading ? "Cargando información..." : "Todavía no hay movimientos recientes."}
+                {loading
+                  ? "Cargando información..."
+                  : "Todavía no hay movimientos recientes."}
               </p>
             )}
           </div>
@@ -421,7 +493,8 @@ export default function Dashboard() {
                 <div>
                   <strong>Promedio general</strong>
                   <p className="muted">
-                    Revisa tu avance y usa el plan de estudio para reforzar materias.
+                    Revisa tu avance y usa el plan de estudio para reforzar
+                    materias.
                   </p>
                 </div>
 
@@ -434,7 +507,8 @@ export default function Dashboard() {
                 <div>
                   <strong>Material de apoyo</strong>
                   <p className="muted">
-                    Consulta recursos y próximos eventos antes de exámenes o entregas.
+                    Consulta recursos y próximos eventos antes de exámenes o
+                    entregas.
                   </p>
                 </div>
 

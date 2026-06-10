@@ -1,19 +1,28 @@
-/* MODO COMPACTO REAL */
+/* Archivo: frontend/src/styles/compact.css */
+/* MODO COMPACTO REAL - LIMPIO */
 
 .compact-mode .container {
   gap: 14px;
+  margin-top: 18px;
+  margin-bottom: 42px;
 }
 
 .compact-mode .card {
   padding: 18px;
-  border-radius: 18px;
+  border-radius: 16px;
 }
 
+.compact-mode .card:first-of-type {
+  padding: 20px;
+}
+
+.compact-mode h1,
 .compact-mode .card h1 {
   font-size: clamp(1.8rem, 4vw, 3rem);
   margin-bottom: 8px;
 }
 
+.compact-mode h2,
 .compact-mode .card h2 {
   font-size: 1.35rem;
   margin-bottom: 10px;
@@ -22,21 +31,33 @@
 .compact-mode .msg,
 .compact-mode .muted {
   font-size: 0.9rem;
-  line-height: 1.35;
+  line-height: 1.4;
 }
+
+/* =========================
+   LISTAS / ITEMS
+   ========================= */
 
 .compact-mode .lista {
   gap: 8px;
 }
 
 .compact-mode .item {
+  min-height: auto;
   padding: 12px 14px;
   border-radius: 14px;
-  min-height: auto;
 }
 
 .compact-mode .item strong {
   font-size: 0.95rem;
+}
+
+/* =========================
+   KPI / COACH
+   ========================= */
+
+.compact-mode .coachGrid {
+  gap: 14px;
 }
 
 .compact-mode .coachRow {
@@ -44,44 +65,104 @@
 }
 
 .compact-mode .kpi {
+  min-height: 86px;
   padding: 14px;
-  border-radius: 16px;
+  border-radius: 14px;
 }
 
 .compact-mode .kpiTitle {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
 }
 
 .compact-mode .kpiValue {
-  font-size: 1.6rem;
+  font-size: 1.65rem;
 }
+
+.compact-mode .traffic {
+  min-height: 86px;
+  padding: 14px;
+  border-radius: 14px;
+}
+
+/* =========================
+   FORMULARIOS
+   ========================= */
 
 .compact-mode input,
 .compact-mode select,
 .compact-mode textarea {
   min-height: 40px;
   padding: 9px 12px;
+  border-radius: 12px;
   font-size: 0.92rem;
+}
+
+.compact-mode textarea {
+  min-height: 82px;
 }
 
 .compact-mode button,
 .compact-mode .badge,
 .compact-mode .btn-ghost,
 .compact-mode .btn-del {
-  min-height: 34px;
+  min-height: 36px;
   padding: 7px 12px;
-  font-size: 0.85rem;
+  border-radius: 12px;
+  font-size: 0.86rem;
 }
 
 .compact-mode .gridX {
   gap: 10px;
 }
 
+.compact-mode label {
+  gap: 6px;
+}
+
+.compact-mode form {
+  gap: 10px;
+}
+
+/* =========================
+   PLAN / META
+   ========================= */
+
+.compact-mode .plan {
+  gap: 8px;
+}
+
+.compact-mode .planItem {
+  padding: 12px 14px;
+  border-radius: 14px;
+}
+
+.compact-mode .planSpacing {
+  margin-top: 12px;
+}
+
 .compact-mode .planSpacingSmall {
   margin-top: 10px;
 }
 
+.compact-mode .planWrap {
+  gap: 10px;
+}
+
+.compact-mode .metaInput {
+  width: 130px;
+}
+
+.compact-mode .metaActions {
+  gap: 8px;
+}
+
+/* =========================
+   PERFIL
+   ========================= */
+
 .compact-mode .profileCleanHero {
+  grid-template-columns: 130px 1fr;
   padding: 22px;
   gap: 18px;
 }
@@ -92,41 +173,116 @@
   border-radius: 22px;
 }
 
-.compact-mode .profilePhotoButton img {
-  border-radius: 19px;
+.compact-mode .profilePhotoButton span {
+  font-size: 2rem;
 }
 
 .compact-mode .profileCleanInfo h1 {
   font-size: clamp(1.9rem, 4vw, 3rem);
 }
 
+.compact-mode .profileDescription {
+  font-size: 0.92rem;
+}
+
 .compact-mode .profilePanel {
   padding: 20px;
 }
 
-.compact-mode .profileSimpleList div,
-.compact-mode .permissionItem {
-  padding: 12px 14px;
-  min-height: 46px;
+.compact-mode .profileSimpleList {
+  gap: 8px;
 }
 
+.compact-mode .profileSimpleList div,
+.compact-mode .permissionItem {
+  min-height: 46px;
+  padding: 12px 14px;
+  border-radius: 14px;
+}
+
+.compact-mode .profileSimpleList span {
+  font-size: 0.72rem;
+}
+
+.compact-mode .profileSimpleList strong {
+  font-size: 0.95rem;
+}
+
+.compact-mode .profileAction {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 0.86rem;
+}
+
+/* =========================
+   AJUSTES
+   ========================= */
+
+.compact-mode .settingsHero,
+.compact-mode .settingsSection {
+  padding: 20px;
+}
+
+.compact-mode .settingsHero h1 {
+  font-size: clamp(1.9rem, 4vw, 3rem);
+}
+
+.compact-mode .settingsItem {
+  padding: 13px 14px;
+  border-radius: 14px;
+}
+
+.compact-mode .settingsButton {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 0.86rem;
+}
+
+/* =========================
+   NAVBAR
+   ========================= */
+
 .compact-mode .nav {
-  min-height: 62px;
+  padding: 9px 0;
 }
 
 .compact-mode .navInner {
-  padding-top: 8px;
-  padding-bottom: 8px;
+  gap: 14px;
+}
+
+.compact-mode .navBrandMark {
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
+  font-size: 25px;
+}
+
+.compact-mode .navBrandText strong {
+  font-size: 14px;
+}
+
+.compact-mode .navBrandText span {
+  font-size: 11px;
+}
+
+.compact-mode .navLinks {
+  padding: 5px;
 }
 
 .compact-mode .navLink {
-  padding: 8px 10px;
-  font-size: 0.9rem;
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: 0.85rem;
 }
 
 .compact-mode .navBell {
   width: 38px;
   height: 38px;
+}
+
+.compact-mode .navBellIcon {
+  width: 20px;
+  height: 20px;
 }
 
 .compact-mode .navUserButton {
@@ -155,25 +311,15 @@
 
 .compact-mode .navDropdown a,
 .compact-mode .navDropdown button {
+  min-height: 36px;
   padding: 8px 10px;
   border-radius: 10px;
 }
 
-.compact-mode .profileAction {
-  min-height: 34px;
-  padding: 0 12px;
-  font-size: 0.85rem;
-}
+/* =========================
+   TABLAS
+   ========================= */
 
-.compact-mode .profileSimpleList span {
-  font-size: 0.72rem;
-}
-
-.compact-mode .profileSimpleList strong {
-  font-size: 0.95rem;
-}
-
-/* Ajuste específico para tablas o listas largas */
 .compact-mode table {
   font-size: 0.9rem;
 }
@@ -183,11 +329,54 @@
   padding: 8px 10px;
 }
 
-/* Reduce separación en formularios */
-.compact-mode label {
-  gap: 6px;
+/* =========================
+   TOASTS
+   ========================= */
+
+.compact-mode .toastViewport {
+  top: 78px;
 }
 
-.compact-mode form {
-  gap: 10px;
+.compact-mode .toast {
+  padding: 12px;
+  border-radius: 15px;
+}
+
+.compact-mode .toastContent strong {
+  font-size: 0.9rem;
+}
+
+.compact-mode .toastContent p {
+  font-size: 0.84rem;
+}
+
+/* =========================
+   RESPONSIVE
+   ========================= */
+
+@media (max-width: 900px) {
+  .compact-mode .profileCleanHero {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .compact-mode .container {
+    gap: 12px;
+  }
+
+  .compact-mode .card {
+    padding: 15px;
+  }
+
+  .compact-mode .profileCleanHero,
+  .compact-mode .settingsHero,
+  .compact-mode .settingsSection {
+    padding: 18px;
+  }
+
+  .compact-mode .profilePhotoButton {
+    width: 88px;
+    height: 88px;
+  }
 }

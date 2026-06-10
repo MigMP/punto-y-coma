@@ -1,8 +1,28 @@
-import React, { useEffect, useMemo, useState } from "react";
+// Archivo: frontend/src/components/layout/NavBar.jsx
+
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { NavLink, Link, useLocation } from "react-router-dom";
+
 import { useAuth } from "../../state/AuthContext.jsx";
 import { apiJSON } from "../../services/api.js";
+
 import "../../styles/navbar.css";
+
+const ALL_ROLES = ["alumno", "maestro", "administrador"];
+const STAFF_ROLES = ["maestro", "administrador"];
+
+function toArray(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.results)) return data.results;
+
+  return [];
+}
+
+function hasRole(role, roles = []) {
+  return roles.includes(role);
+}
 
 function BellIcon() {
   return (
@@ -19,6 +39,7 @@ function BellIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+
       <path
         d="M10 20C10.4 20.6 11.1 21 12 21C12.9 21 13.6 20.6 14 20"
         stroke="currentColor"
@@ -45,95 +66,14 @@ export default function NavBar() {
     return ctxToken || localStorage.getItem("token") || "";
   }, [ctxToken]);
 
-  const role = user?.role;
-  const displayUser = user?.name || user?.nombre || user?.email || "Cuenta";
+  const role = user?.role || "";
+  const displayUser = user?.nombre || user?.name || user?.email || "Cuenta";
   const email = user?.email || "";
 
   const photoKey = useMemo(() => {
     const cleanEmail = String(email || "usuario").trim().toLowerCase();
     return `punto_coma_profile_photo_${cleanEmail}`;
   }, [email]);
-
-  useEffect(() => {
-    if (!email) return;
-
-    const savedPhoto = localStorage.getItem(photoKey) || "";
-    setProfilePhoto(savedPhoto);
-
-    const onPhotoUpdated = (event) => {
-      const eventEmail = String(event.detail?.email || "").trim().toLowerCase();
-      const currentEmail = String(email || "").trim().toLowerCase();
-
-      if (eventEmail === currentEmail) {
-        setProfilePhoto(event.detail?.photo || "");
-      }
-    };
-
-    window.addEventListener("profile-photo-updated", onPhotoUpdated);
-
-    return () => {
-      window.removeEventListener("profile-photo-updated", onPhotoUpdated);
-    };
-  }, [email, photoKey]);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("ajustes_academic_reminders") !== "false";
-    setAcademicReminders(saved);
-
-    const onAcademicRemindersUpdated = (event) => {
-      setAcademicReminders(Boolean(event.detail?.enabled));
-    };
-
-    window.addEventListener(
-      "academic-reminders-updated",
-      onAcademicRemindersUpdated
-    );
-
-    return () => {
-      window.removeEventListener(
-        "academic-reminders-updated",
-        onAcademicRemindersUpdated
-      );
-    };
-  }, []);
-
-  const loadUnreadNotifications = async () => {
-    if (!token || !role) {
-      setUnreadCount(0);
-      return;
-    }
-
-    try {
-      const data = await apiJSON("/notificaciones?unread=true", { token });
-
-      if (Array.isArray(data)) {
-        setUnreadCount(data.length);
-      } else {
-        setUnreadCount(0);
-      }
-    } catch {
-      setUnreadCount(0);
-    }
-  };
-
-  useEffect(() => {
-    loadUnreadNotifications();
-
-    const interval = window.setInterval(() => {
-      loadUnreadNotifications();
-    }, 30000);
-
-    return () => {
-      window.clearInterval(interval);
-    };
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, role]);
-
-  useEffect(() => {
-    loadUnreadNotifications();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
 
   const roleInfo = useMemo(() => {
     const roles = {
@@ -154,28 +94,17 @@ export default function NavBar() {
       },
     };
 
-    return roles[role] || {
-      label: "Usuario",
-      path: "/app",
-      link: "Panel",
-    };
+    return (
+      roles[role] || {
+        label: "Usuario",
+        path: "/app",
+        link: "Panel",
+      }
+    );
   }, [role]);
 
-  const canSeeResources =
-    role === "alumno" || role === "maestro" || role === "administrador";
-
-  const canSeeCalendar =
-    role === "alumno" || role === "maestro" || role === "administrador";
-
-  const canSeeTasks =
-    role === "alumno" || role === "maestro" || role === "administrador";
-
-  const canSeeNotifications =
-    role === "alumno" || role === "maestro" || role === "administrador";
-
-  const canSeeAcademicTracking =
-    role === "maestro" || role === "administrador";
-
+  const canSeeMainTools = hasRole(role, ALL_ROLES);
+  const canSeeAcademicTracking = hasRole(role, STAFF_ROLES);
   const canSeeAdminTools = role === "administrador";
 
   const initials = useMemo(() => {
@@ -220,8 +149,85 @@ export default function NavBar() {
     window.location.href = "/";
   };
 
+  const loadUnreadNotifications = useCallback(async () => {
+    if (!token || !role) {
+      setUnreadCount(0);
+      return;
+    }
+
+    try {
+      const data = await apiJSON("/notificaciones?unread=true", { token });
+      setUnreadCount(toArray(data).length);
+    } catch {
+      setUnreadCount(0);
+    }
+  }, [token, role]);
+
+  useEffect(() => {
+    if (!email) {
+      setProfilePhoto("");
+      return;
+    }
+
+    const savedPhoto = localStorage.getItem(photoKey) || "";
+    setProfilePhoto(savedPhoto);
+
+    const onPhotoUpdated = (event) => {
+      const eventEmail = String(event.detail?.email || "").trim().toLowerCase();
+      const currentEmail = String(email || "").trim().toLowerCase();
+
+      if (eventEmail === currentEmail) {
+        setProfilePhoto(event.detail?.photo || "");
+      }
+    };
+
+    window.addEventListener("profile-photo-updated", onPhotoUpdated);
+
+    return () => {
+      window.removeEventListener("profile-photo-updated", onPhotoUpdated);
+    };
+  }, [email, photoKey]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("ajustes_academic_reminders") !== "false";
+    setAcademicReminders(saved);
+
+    const onAcademicRemindersUpdated = (event) => {
+      setAcademicReminders(Boolean(event.detail?.enabled));
+    };
+
+    window.addEventListener(
+      "academic-reminders-updated",
+      onAcademicRemindersUpdated
+    );
+
+    return () => {
+      window.removeEventListener(
+        "academic-reminders-updated",
+        onAcademicRemindersUpdated
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    loadUnreadNotifications();
+
+    const interval = window.setInterval(() => {
+      loadUnreadNotifications();
+    }, 30000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [loadUnreadNotifications]);
+
+  useEffect(() => {
+    closeMenu();
+    loadUnreadNotifications();
+  }, [location.pathname, loadUnreadNotifications]);
+
   const shouldShowNotificationDot =
-    canSeeNotifications && academicReminders && unreadCount > 0;
+    canSeeMainTools && academicReminders && unreadCount > 0;
 
   return (
     <header className="nav">
@@ -256,7 +262,7 @@ export default function NavBar() {
             </NavLink>
           )}
 
-          {canSeeCalendar && (
+          {canSeeMainTools && (
             <NavLink
               to="/calendario"
               className={({ isActive }) =>
@@ -267,7 +273,7 @@ export default function NavBar() {
             </NavLink>
           )}
 
-          {canSeeResources && (
+          {canSeeMainTools && (
             <NavLink
               to="/recursos"
               className={({ isActive }) =>
@@ -278,7 +284,7 @@ export default function NavBar() {
             </NavLink>
           )}
 
-          {canSeeTasks && (
+          {canSeeMainTools && (
             <NavLink
               to="/tareas"
               className={({ isActive }) =>
@@ -302,7 +308,7 @@ export default function NavBar() {
         </nav>
 
         <div className="navRight">
-          {canSeeNotifications && (
+          {canSeeMainTools && (
             <NavLink
               to="/notificaciones"
               className={({ isActive }) =>

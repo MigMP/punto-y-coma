@@ -1,3 +1,5 @@
+// Archivo: backend/src/db/jsonStore.js
+
 const fs = require("fs");
 const path = require("path");
 
@@ -11,6 +13,8 @@ const EMPTY_DB = {
   actividad: [],
   tareas: [],
   notificaciones: [],
+  recursos: [],
+  calendario: [],
 };
 
 function ensureFile() {
@@ -29,11 +33,19 @@ function normalizeDB(parsed = {}) {
   return {
     users: Array.isArray(parsed.users) ? parsed.users : [],
     materias: Array.isArray(parsed.materias) ? parsed.materias : [],
-    calificaciones: Array.isArray(parsed.calificaciones) ? parsed.calificaciones : [],
-    asignaciones: Array.isArray(parsed.asignaciones) ? parsed.asignaciones : [],
+    calificaciones: Array.isArray(parsed.calificaciones)
+      ? parsed.calificaciones
+      : [],
+    asignaciones: Array.isArray(parsed.asignaciones)
+      ? parsed.asignaciones
+      : [],
     actividad: Array.isArray(parsed.actividad) ? parsed.actividad : [],
     tareas: Array.isArray(parsed.tareas) ? parsed.tareas : [],
-    notificaciones: Array.isArray(parsed.notificaciones) ? parsed.notificaciones : [],
+    notificaciones: Array.isArray(parsed.notificaciones)
+      ? parsed.notificaciones
+      : [],
+    recursos: Array.isArray(parsed.recursos) ? parsed.recursos : [],
+    calendario: Array.isArray(parsed.calendario) ? parsed.calendario : [],
   };
 }
 

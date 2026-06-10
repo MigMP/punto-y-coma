@@ -1,3 +1,5 @@
+// Archivo: backend/src/db/firestoreStore.js
+
 const { getFirestore, shouldUseFirebase } = require("../config/firebase");
 
 const COLLECTIONS = Object.freeze({
@@ -8,6 +10,9 @@ const COLLECTIONS = Object.freeze({
   actividad: "actividad",
   tareas: "tareas",
   notificaciones: "notificaciones",
+  recursos: "recursos",
+  calendario: "calendario",
+  teacherCodes: "teacherCodes",
 });
 
 function assertFirebaseEnabled() {
@@ -64,6 +69,9 @@ async function loadFirebaseDB() {
     actividad,
     tareas,
     notificaciones,
+    recursos,
+    calendario,
+    teacherCodes,
   ] = await Promise.all([
     getCollection(COLLECTIONS.users),
     getCollection(COLLECTIONS.materias),
@@ -72,6 +80,9 @@ async function loadFirebaseDB() {
     getCollection(COLLECTIONS.actividad),
     getCollection(COLLECTIONS.tareas),
     getCollection(COLLECTIONS.notificaciones),
+    getCollection(COLLECTIONS.recursos),
+    getCollection(COLLECTIONS.calendario),
+    getCollection(COLLECTIONS.teacherCodes),
   ]);
 
   return {
@@ -82,6 +93,9 @@ async function loadFirebaseDB() {
     actividad,
     tareas,
     notificaciones,
+    recursos,
+    calendario,
+    teacherCodes,
   };
 }
 
@@ -96,6 +110,9 @@ async function saveFirebaseDB(dbData) {
     COLLECTIONS.actividad,
     COLLECTIONS.tareas,
     COLLECTIONS.notificaciones,
+    COLLECTIONS.recursos,
+    COLLECTIONS.calendario,
+    COLLECTIONS.teacherCodes,
   ];
 
   for (const collectionName of collections) {

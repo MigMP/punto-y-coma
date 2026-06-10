@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from "react";
+// Archivo: frontend/src/pages/Login.jsx
+
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../state/AuthContext.jsx";
@@ -7,9 +9,19 @@ import { useToast } from "../components/feedback/ToastProvider.jsx";
 
 import "../styles/auth.css";
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function getDefaultPathByRole(role) {
+  if (role === "alumno") return "/plan";
+  if (role === "maestro") return "/capturar";
+  if (role === "administrador") return "/admin";
+
+  return "/app";
+}
+
 export default function Login() {
   const navigate = useNavigate();
-  const { login, isAuthed } = useAuth();
+  const { login, isAuthed, user } = useAuth();
   const { showToast } = useToast();
 
   const [form, setForm] = useState({
@@ -19,6 +31,10 @@ export default function Login() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const email = useMemo(() => {
+    return form.email.trim().toLowerCase();
+  }, [form.email]);
 
   useEffect(() => {
     document.body.classList.add("auth-bg");
@@ -30,11 +46,11 @@ export default function Login() {
 
   useEffect(() => {
     if (isAuthed) {
-      navigate("/app", {
+      navigate(getDefaultPathByRole(user?.role), {
         replace: true,
       });
     }
-  }, [isAuthed, navigate]);
+  }, [isAuthed, navigate, user?.role]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -45,18 +61,32 @@ export default function Login() {
     }));
   };
 
-  const onSubmit = async (event) => {
-    event.preventDefault();
-
-    const email = form.email.trim().toLowerCase();
-    const password = form.password;
-
-    if (!email || !password) {
+  const validateForm = () => {
+    if (!email || !form.password) {
       showToast({
         type: "warning",
         title: "Campos incompletos",
         message: "Ingresa tu correo y contraseña para continuar.",
       });
+      return false;
+    }
+
+    if (!EMAIL_RE.test(email)) {
+      showToast({
+        type: "warning",
+        title: "Correo inválido",
+        message: "Escribe un correo electrónico válido.",
+      });
+      return false;
+    }
+
+    return true;
+  };
+
+  const onSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!validateForm()) {
       return;
     }
 
@@ -67,7 +97,7 @@ export default function Login() {
         method: "POST",
         body: {
           email,
-          password,
+          password: form.password,
         },
       });
 
@@ -80,7 +110,7 @@ export default function Login() {
         return;
       }
 
-      login({
+      const session = login({
         token: data.token,
         user: data.user,
       });
@@ -88,10 +118,10 @@ export default function Login() {
       showToast({
         type: "success",
         title: "Sesión iniciada",
-        message: `Bienvenido ${data.user.name || "usuario"}.`,
+        message: `Bienvenido ${session.user.nombre || session.user.email}.`,
       });
 
-      navigate("/app", {
+      navigate(getDefaultPathByRole(session.user.role), {
         replace: true,
       });
     } catch (error) {
@@ -167,6 +197,7 @@ export default function Login() {
                   placeholder="correo@ejemplo.com"
                   autoComplete="email"
                   required
+                  disabled={loading}
                 />
               </label>
 
@@ -182,19 +213,21 @@ export default function Login() {
                     placeholder="Tu contraseña"
                     autoComplete="current-password"
                     required
+                    disabled={loading}
                   />
 
                   <button
                     type="button"
                     className="passwordToggle"
                     onClick={() => setShowPassword((value) => !value)}
+                    disabled={loading}
                   >
                     {showPassword ? "Ocultar" : "Ver"}
                   </button>
                 </div>
               </label>
 
-              <button className="authSubmit" disabled={loading}>
+              <button type="submit" className="authSubmit" disabled={loading}>
                 {loading ? "Verificando..." : "Entrar"}
               </button>
 

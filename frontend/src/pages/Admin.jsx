@@ -1,4 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+// Archivo: frontend/src/pages/Admin.jsx
+
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import NavBar from "../components/layout/NavBar.jsx";
 import { useAuth } from "../state/AuthContext.jsx";
@@ -8,6 +10,56 @@ import { useConfirm } from "../components/feedback/ConfirmProvider.jsx";
 
 import "../styles/dashboard.css";
 import "../styles/coach.css";
+
+function toArray(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.results)) return data.results;
+
+  return [];
+}
+
+function getUserName(user) {
+  return user?.nombre || user?.name || user?.email || "Administrador";
+}
+
+function normalizeSubjectName(value) {
+  return String(value || "").trim().replace(/\s+/g, " ");
+}
+
+function validateSubjectName(value) {
+  const nombre = normalizeSubjectName(value);
+
+  if (!nombre) {
+    return "Escribe el nombre de la materia.";
+  }
+
+  if (nombre.length < 4) {
+    return "El nombre de la materia debe tener mínimo 4 caracteres.";
+  }
+
+  if (nombre.length > 80) {
+    return "El nombre de la materia no puede pasar de 80 caracteres.";
+  }
+
+  return "";
+}
+
+function formatDate(value) {
+  if (!value) return "Sin fecha";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Fecha no válida";
+  }
+
+  return date.toLocaleString("es-MX", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
 
 export default function Admin() {
   const { showToast } = useToast();
@@ -21,6 +73,7 @@ export default function Admin() {
   const [materias, setMaterias] = useState([]);
   const [maestros, setMaestros] = useState([]);
   const [asignaciones, setAsignaciones] = useState([]);
+  const [teacherCodes, setTeacherCodes] = useState([]);
 
   const [materiaNueva, setMateriaNueva] = useState("");
   const [formAsignacion, setFormAsignacion] = useState({
@@ -31,6 +84,8 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [savingMateria, setSavingMateria] = useState(false);
   const [savingAsignacion, setSavingAsignacion] = useState(false);
+  const [generatingCode, setGeneratingCode] = useState(false);
+  const [cancelingCodeId, setCancelingCodeId] = useState("");
 
   useEffect(() => {
     document.body.classList.add("app-bg");
@@ -40,25 +95,40 @@ export default function Admin() {
     };
   }, []);
 
-  const loadAdminData = async () => {
+  const loadAdminData = useCallback(async () => {
+    if (!token) {
+      setMaterias([]);
+      setMaestros([]);
+      setAsignaciones([]);
+      setTeacherCodes([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
-      const [materiasData, maestrosData, asignacionesData] = await Promise.all([
+      const [
+        materiasData,
+        maestrosData,
+        asignacionesData,
+        teacherCodesData,
+      ] = await Promise.all([
         apiJSON("/materias", { token }),
         apiJSON("/maestros", { token }),
         apiJSON("/asignaciones", { token }),
+        apiJSON("/teacher-codes", { token }),
       ]);
 
-      const materiasArr = Array.isArray(materiasData) ? materiasData : [];
-      const maestrosArr = Array.isArray(maestrosData) ? maestrosData : [];
-      const asignacionesArr = Array.isArray(asignacionesData)
-        ? asignacionesData
-        : [];
+      const materiasArr = toArray(materiasData);
+      const maestrosArr = toArray(maestrosData);
+      const asignacionesArr = toArray(asignacionesData);
+      const teacherCodesArr = toArray(teacherCodesData);
 
       setMaterias(materiasArr);
       setMaestros(maestrosArr);
       setAsignaciones(asignacionesArr);
+      setTeacherCodes(teacherCodesArr);
 
       setFormAsignacion((prev) => ({
         materiaId:
@@ -72,21 +142,23 @@ export default function Admin() {
       showToast({
         type: "error",
         title: "Error al cargar",
-        message: error.message || "No se pudo cargar el panel de administración.",
+        message:
+          error.message || "No se pudo cargar el panel de administración.",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, showToast]);
 
   useEffect(() => {
     loadAdminData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadAdminData]);
 
   const totalMaterias = materias.length;
   const totalMaestros = maestros.length;
   const totalAsignaciones = asignaciones.length;
+  const codigosDisponibles = teacherCodes.filter((item) => !item.used).length;
+  const codigosUsados = teacherCodes.filter((item) => item.used).length;
 
   const maestrosSinAsignacion = useMemo(() => {
     const asignados = new Set(
@@ -100,16 +172,17 @@ export default function Admin() {
     ).length;
   }, [maestros, asignaciones]);
 
-  const addMateria = async (e) => {
-    e.preventDefault();
+  const addMateria = async (event) => {
+    event.preventDefault();
 
-    const nombre = materiaNueva.trim();
+    const nombre = normalizeSubjectName(materiaNueva);
+    const error = validateSubjectName(nombre);
 
-    if (!nombre) {
+    if (error) {
       showToast({
         type: "warning",
-        title: "Campo vacío",
-        message: "Escribe el nombre de la materia.",
+        title: "Revisa la materia",
+        message: error,
       });
       return;
     }
@@ -136,7 +209,7 @@ export default function Admin() {
       showToast({
         type: "error",
         title: "No se pudo crear",
-        message: error.message,
+        message: error.message || "Intenta nuevamente.",
       });
     } finally {
       setSavingMateria(false);
@@ -171,13 +244,13 @@ export default function Admin() {
       showToast({
         type: "error",
         title: "No se eliminó",
-        message: error.message,
+        message: error.message || "Intenta nuevamente.",
       });
     }
   };
 
-  const addAsignacion = async (e) => {
-    e.preventDefault();
+  const addAsignacion = async (event) => {
+    event.preventDefault();
 
     if (!formAsignacion.materiaId || !formAsignacion.maestroEmail) {
       showToast({
@@ -211,7 +284,7 @@ export default function Admin() {
       showToast({
         type: "error",
         title: "No se pudo asignar",
-        message: error.message,
+        message: error.message || "Intenta nuevamente.",
       });
     } finally {
       setSavingAsignacion(false);
@@ -248,7 +321,82 @@ export default function Admin() {
       showToast({
         type: "error",
         title: "Error",
-        message: error.message,
+        message: error.message || "Intenta nuevamente.",
+      });
+    }
+  };
+
+  const generateTeacherCode = async () => {
+    try {
+      setGeneratingCode(true);
+
+      const response = await apiJSON("/teacher-codes", {
+        token,
+        method: "POST",
+        body: {},
+      });
+
+      const code = response?.item?.code || "Código generado";
+
+      showToast({
+        type: "success",
+        title: "Código docente generado",
+        message: code,
+      });
+
+      await loadAdminData();
+    } catch (error) {
+      showToast({
+        type: "error",
+        title: "No se pudo generar",
+        message: error.message || "Intenta nuevamente.",
+      });
+    } finally {
+      setGeneratingCode(false);
+    }
+  };
+
+  const cancelTeacherCode = async (codeItem) => {
+  try {
+    setCancelingCodeId(String(codeItem.id));
+
+    await apiJSON(`/teacher-codes/${codeItem.id}`, {
+      token,
+      method: "DELETE",
+    });
+
+    showToast({
+      type: "success",
+      title: "Código cancelado",
+      message: codeItem.code,
+    });
+
+    await loadAdminData();
+  } catch (error) {
+    showToast({
+      type: "error",
+      title: "No se pudo cancelar",
+      message: error.message || "Intenta nuevamente.",
+    });
+  } finally {
+    setCancelingCodeId("");
+  }
+};
+
+  const copyTeacherCode = async (code) => {
+    try {
+      await navigator.clipboard.writeText(code);
+
+      showToast({
+        type: "success",
+        title: "Código copiado",
+        message: code,
+      });
+    } catch {
+      showToast({
+        type: "info",
+        title: "Copia manual",
+        message: code,
       });
     }
   };
@@ -261,12 +409,24 @@ export default function Admin() {
         <section className="card row-between">
           <div>
             <h1>Administración del sistema</h1>
+
             <p className="msg">
-              {user?.name || "Administrador"} · Gestión académica avanzada
+              {getUserName(user)} · Gestión académica avanzada
             </p>
           </div>
 
-          <button className="btn-ghost" type="button" onClick={loadAdminData}>
+          <button
+            className="btn-ghost"
+            type="button"
+            onClick={loadAdminData}
+            disabled={
+              loading ||
+              savingMateria ||
+              savingAsignacion ||
+              generatingCode ||
+              Boolean(cancelingCodeId)
+            }
+          >
             {loading ? "Cargando..." : "Actualizar"}
           </button>
         </section>
@@ -291,14 +451,116 @@ export default function Admin() {
             </div>
 
             <div className="kpi">
-              <div className="kpiTitle">Maestros sin asignación</div>
-              <div className="kpiValue">{maestrosSinAsignacion}</div>
+              <div className="kpiTitle">Códigos disponibles</div>
+              <div className="kpiValue">{codigosDisponibles}</div>
             </div>
           </div>
         </section>
 
         <section className="card">
+          <div className="row-between">
+            <div>
+              <h2>Códigos docentes</h2>
+
+              <p className="msg">
+                Genera códigos únicos para que solo maestros autorizados puedan
+                crear una cuenta. Cada código solo puede usarse una vez.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={generateTeacherCode}
+              disabled={loading || generatingCode}
+            >
+              {generatingCode ? "Generando..." : "Generar código"}
+            </button>
+          </div>
+
+          <div className="coachRow planSpacingSmall">
+            <div className="kpi">
+              <div className="kpiTitle">Disponibles</div>
+              <div className="kpiValue">{codigosDisponibles}</div>
+            </div>
+
+            <div className="kpi">
+              <div className="kpiTitle">Usados / cancelados</div>
+              <div className="kpiValue">{codigosUsados}</div>
+            </div>
+          </div>
+
+          <div className="lista">
+            {teacherCodes.map((codeItem) => {
+              const usedBy = codeItem.usedBy || "";
+              const isCanceled =
+                usedBy.toUpperCase() === "CANCELADO POR ADMIN";
+
+              return (
+                <div className="item" key={codeItem.id}>
+                  <div>
+                    <strong>{codeItem.code}</strong>
+
+                    <p className="muted">
+                      Creado por {codeItem.createdBy || "Administrador"} ·{" "}
+                      {formatDate(codeItem.createdAt)}
+                    </p>
+
+                    {codeItem.used && (
+                      <p className="muted">
+                        {isCanceled
+                          ? "Cancelado por administrador"
+                          : `Usado por ${codeItem.usedBy}`}{" "}
+                        · {formatDate(codeItem.usedAt)}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="right">
+                    <span
+                      className={`badge ${
+                        codeItem.used ? "warn" : "ok"
+                      }`}
+                    >
+                      {codeItem.used ? "No disponible" : "Disponible"}
+                    </span>
+
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      onClick={() => copyTeacherCode(codeItem.code)}
+                    >
+                      Copiar
+                    </button>
+
+                    {!codeItem.used && (
+                      <button
+                        type="button"
+                        className="btn-del"
+                        onClick={() => cancelTeacherCode(codeItem)}
+                        disabled={cancelingCodeId === String(codeItem.id)}
+                      >
+                        {cancelingCodeId === String(codeItem.id)
+                          ? "Cancelando..."
+                          : "Cancelar"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {!teacherCodes.length && !loading && (
+              <p className="msg">
+                Todavía no hay códigos docentes. Genera uno para registrar
+                maestros autorizados.
+              </p>
+            )}
+          </div>
+        </section>
+
+        <section className="card">
           <h2>Crear materia</h2>
+
           <p className="msg">
             Registra las materias que podrán asignarse a maestros y usarse para
             capturar calificaciones.
@@ -307,12 +569,12 @@ export default function Admin() {
           <form className="row planWrap planSpacingSmall" onSubmit={addMateria}>
             <input
               value={materiaNueva}
-              onChange={(e) => setMateriaNueva(e.target.value)}
+              onChange={(event) => setMateriaNueva(event.target.value)}
               placeholder="Ej. Matemáticas, Física, Programación Web"
               disabled={savingMateria}
             />
 
-            <button type="submit" disabled={savingMateria}>
+            <button type="submit" disabled={savingMateria || loading}>
               {savingMateria ? "Guardando..." : "Agregar materia"}
             </button>
           </form>
@@ -329,6 +591,7 @@ export default function Admin() {
                   type="button"
                   className="btn-del"
                   onClick={() => deleteMateria(materia)}
+                  disabled={savingMateria || savingAsignacion}
                 >
                   Eliminar
                 </button>
@@ -343,6 +606,7 @@ export default function Admin() {
 
         <section className="card">
           <h2>Asignar materia a maestro</h2>
+
           <p className="msg">
             Selecciona una materia y un maestro para permitirle capturar
             calificaciones en esa asignatura.
@@ -353,15 +617,16 @@ export default function Admin() {
               Materia
               <select
                 value={formAsignacion.materiaId}
-                onChange={(e) =>
+                onChange={(event) =>
                   setFormAsignacion((prev) => ({
                     ...prev,
-                    materiaId: e.target.value,
+                    materiaId: event.target.value,
                   }))
                 }
-                disabled={!materias.length || savingAsignacion}
+                disabled={!materias.length || savingAsignacion || loading}
               >
                 <option value="">Selecciona una materia</option>
+
                 {materias.map((materia) => (
                   <option value={materia.id} key={materia.id}>
                     {materia.nombre}
@@ -374,18 +639,19 @@ export default function Admin() {
               Maestro
               <select
                 value={formAsignacion.maestroEmail}
-                onChange={(e) =>
+                onChange={(event) =>
                   setFormAsignacion((prev) => ({
                     ...prev,
-                    maestroEmail: e.target.value,
+                    maestroEmail: event.target.value,
                   }))
                 }
-                disabled={!maestros.length || savingAsignacion}
+                disabled={!maestros.length || savingAsignacion || loading}
               >
                 <option value="">Selecciona un maestro</option>
+
                 {maestros.map((maestro) => (
                   <option key={maestro.email} value={maestro.email}>
-                    {maestro.name} · {maestro.email}
+                    {getUserName(maestro)} · {maestro.email}
                   </option>
                 ))}
               </select>
@@ -393,7 +659,12 @@ export default function Admin() {
 
             <button
               type="submit"
-              disabled={!materias.length || !maestros.length || savingAsignacion}
+              disabled={
+                !materias.length ||
+                !maestros.length ||
+                savingAsignacion ||
+                loading
+              }
             >
               {savingAsignacion ? "Asignando..." : "Crear asignación"}
             </button>
@@ -401,7 +672,8 @@ export default function Admin() {
 
           {!maestros.length && !loading && (
             <p className="msg">
-              No hay maestros registrados. Crea una cuenta con rol de maestro.
+              No hay maestros registrados. Genera un código docente y crea una
+              cuenta con rol de maestro.
             </p>
           )}
         </section>
@@ -414,6 +686,7 @@ export default function Admin() {
               <div className="item" key={asignacion.id}>
                 <div>
                   <strong>{asignacion.materiaNombre}</strong>
+
                   <p className="muted">
                     {asignacion.maestroNombre || "Maestro"} ·{" "}
                     {asignacion.maestroEmail}
@@ -424,6 +697,7 @@ export default function Admin() {
                   className="btn-del"
                   type="button"
                   onClick={() => deleteAsignacion(asignacion)}
+                  disabled={savingMateria || savingAsignacion}
                 >
                   Quitar
                 </button>
@@ -450,7 +724,7 @@ export default function Admin() {
               return (
                 <div className="item" key={maestro.email}>
                   <div>
-                    <strong>{maestro.name}</strong>
+                    <strong>{getUserName(maestro)}</strong>
                     <p className="muted">{maestro.email}</p>
                   </div>
 

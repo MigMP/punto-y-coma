@@ -1,3 +1,5 @@
+// Archivo: backend/src/routes/resources.routes.js
+
 const express = require("express");
 
 const {
@@ -13,6 +15,20 @@ const { ROLES } = require("../utils/roles");
 const router = express.Router();
 
 const VALID_TYPES = ["video", "guia", "pdf", "link", "recomendacion"];
+const TITLE_MIN_LENGTH = 4;
+const TITLE_MAX_LENGTH = 120;
+const DESCRIPTION_MIN_LENGTH = 8;
+const DESCRIPTION_MAX_LENGTH = 1000;
+
+const BLOCKED_TITLES = new Set([
+  "test",
+  "prueba",
+  "aaa",
+  "aaaa",
+  "recurso",
+  "sin titulo",
+  "sin título",
+]);
 
 function normalizeText(value) {
   return String(value || "").trim().replace(/\s+/g, " ");
@@ -26,13 +42,66 @@ function normalizeUrl(value) {
   return String(value || "").trim();
 }
 
+function parsePositiveId(value) {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+
+  const id = Number(value);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    return null;
+  }
+
+  return id;
+}
+
 function isValidUrl(value) {
   try {
     const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
+
+    if (!["http:", "https:"].includes(url.protocol)) {
+      return false;
+    }
+
+    if (!url.hostname || url.hostname.length < 3) {
+      return false;
+    }
+
+    return true;
   } catch {
     return false;
   }
+}
+
+function validateResourceText({ title, description }) {
+  const comparableTitle = title.toLowerCase();
+
+  if (!title || title.length < TITLE_MIN_LENGTH) {
+    return `El título debe tener al menos ${TITLE_MIN_LENGTH} caracteres`;
+  }
+
+  if (title.length > TITLE_MAX_LENGTH) {
+    return `El título no debe superar ${TITLE_MAX_LENGTH} caracteres`;
+  }
+
+  if (BLOCKED_TITLES.has(comparableTitle)) {
+    return "El título no puede ser un dato de prueba";
+  }
+
+  if (!/[a-záéíóúüñ]/i.test(title)) {
+    return "El título debe incluir letras";
+  }
+
+  if (!description || description.length < DESCRIPTION_MIN_LENGTH) {
+    return `La descripción debe tener al menos ${DESCRIPTION_MIN_LENGTH} caracteres`;
+  }
+
+  if (description.length > DESCRIPTION_MAX_LENGTH) {
+    return `La descripción no debe superar ${DESCRIPTION_MAX_LENGTH} caracteres`;
+  }
+
+  return null;
 }
 
 function findMateria(materias, materiaId) {
@@ -52,8 +121,19 @@ function canManageResource(req, recurso) {
   if (req.user.role === ROLES.ADMIN) return true;
   if (req.user.role !== ROLES.MAESTRO) return false;
 
-  return String(recurso.creadoPor || "").toLowerCase() ===
-    String(req.user.email || "").toLowerCase();
+  return (
+    String(recurso.creadoPor || "").toLowerCase() ===
+    String(req.user.email || "").toLowerCase()
+  );
+}
+
+function sortResources(items) {
+  return [...items].sort((a, b) => {
+    const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+    const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+
+    return dateB - dateA;
+  });
 }
 
 async function createActivity(req, data = {}) {
@@ -111,16 +191,29 @@ router.get("/recursos", auth, async (req, res) => {
     ]);
 
     const type = normalizeType(req.query.type);
-    const materiaId = req.query.materiaId ? Number(req.query.materiaId) : null;
+    const materiaIdRaw = req.query.materiaId;
+    const materiaId = materiaIdRaw ? parsePositiveId(materiaIdRaw) : null;
     const query = normalizeText(req.query.q).toLowerCase();
+
+    if (type && type !== "all" && !VALID_TYPES.includes(type)) {
+      return res.status(400).json({
+        error: "Tipo de recurso inválido",
+      });
+    }
+
+    if (materiaIdRaw && !materiaId) {
+      return res.status(400).json({
+        error: "materiaId inválido",
+      });
+    }
 
     let items = recursos;
 
-    if (type && type !== "ALL") {
+    if (type && type !== "all") {
       items = items.filter((recurso) => recurso.type === type);
     }
 
-    if (materiaId !== null && Number.isFinite(materiaId)) {
+    if (materiaId !== null) {
       items = items.filter((recurso) => Number(recurso.materiaId) === materiaId);
     }
 
@@ -141,15 +234,9 @@ router.get("/recursos", auth, async (req, res) => {
       });
     }
 
-    items = items
-      .map((recurso) => withMateriaName(materias, recurso))
-      .sort((a, b) => {
-        const dateA = new Date(a.createdAt || 0).getTime();
-        const dateB = new Date(b.createdAt || 0).getTime();
-        return dateB - dateA;
-      });
+    const detailed = items.map((recurso) => withMateriaName(materias, recurso));
 
-    return res.json(items);
+    return res.json(sortResources(detailed));
   } catch (error) {
     return res.status(500).json({
       error: "No se pudieron consultar recursos",
@@ -169,17 +256,13 @@ router.post("/recursos", auth, requireRole(ROLES.ADMIN, ROLES.MAESTRO), async (r
     const description = normalizeText(req.body.description);
     const type = normalizeType(req.body.type || "link");
     const url = normalizeUrl(req.body.url);
-    const materiaId = req.body.materiaId ? Number(req.body.materiaId) : null;
+    const materiaId = parsePositiveId(req.body.materiaId);
 
-    if (!title || title.length < 4) {
-      return res.status(400).json({
-        error: "El título debe tener al menos 4 caracteres",
-      });
-    }
+    const textError = validateResourceText({ title, description });
 
-    if (!description || description.length < 8) {
+    if (textError) {
       return res.status(400).json({
-        error: "La descripción debe tener al menos 8 caracteres",
+        error: textError,
       });
     }
 
@@ -192,6 +275,12 @@ router.post("/recursos", auth, requireRole(ROLES.ADMIN, ROLES.MAESTRO), async (r
     if (!url || !isValidUrl(url)) {
       return res.status(400).json({
         error: "URL inválida. Debe iniciar con http:// o https://",
+      });
+    }
+
+    if (req.body.materiaId && !materiaId) {
+      return res.status(400).json({
+        error: "materiaId inválido",
       });
     }
 
@@ -255,9 +344,9 @@ router.post("/recursos", auth, requireRole(ROLES.ADMIN, ROLES.MAESTRO), async (r
 
 router.delete("/recursos/:id", auth, requireRole(ROLES.ADMIN, ROLES.MAESTRO), async (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const id = parsePositiveId(req.params.id);
 
-    if (!Number.isFinite(id)) {
+    if (!id) {
       return res.status(400).json({
         error: "ID de recurso inválido",
       });
@@ -288,6 +377,15 @@ router.delete("/recursos/:id", auth, requireRole(ROLES.ADMIN, ROLES.MAESTRO), as
       type: "recurso_eliminado",
       title: "Recurso de apoyo eliminado",
       description: `Se eliminó el recurso "${deleted.title}".`,
+      entity: "recurso",
+      entityId: deleted.id,
+    });
+
+    await createNotification({
+      type: "recurso_eliminado",
+      title: "Recurso eliminado",
+      message: `Se eliminó el recurso "${deleted.title}".`,
+      targetRole: ROLES.ALUMNO,
       entity: "recurso",
       entityId: deleted.id,
     });

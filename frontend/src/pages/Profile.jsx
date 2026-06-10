@@ -1,3 +1,5 @@
+// Archivo: frontend/src/pages/Profile.jsx
+
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -10,9 +12,69 @@ import NavBar from "../components/layout/NavBar.jsx";
 import "../styles/dashboard.css";
 import "../styles/profile.css";
 
+const MAX_PHOTO_SIZE = 1.5 * 1024 * 1024;
+
+function getUserName(user) {
+  return user?.nombre || user?.name || user?.email || "Usuario";
+}
+
 function getPhotoKey(user) {
   const email = String(user?.email || "usuario").trim().toLowerCase();
   return `punto_coma_profile_photo_${email}`;
+}
+
+function safeGetItem(key) {
+  try {
+    return localStorage.getItem(key) || "";
+  } catch {
+    return "";
+  }
+}
+
+function safeSetItem(key, value) {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function safeRemoveItem(key) {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // no-op
+  }
+}
+
+function clearAuthStorage() {
+  const localKeys = [
+    "token",
+    "user",
+    "authUser",
+    "currentUser",
+    "punto_coma_user",
+    "punto_coma_token",
+  ];
+
+  const sessionKeys = ["token", "user", "authUser", "currentUser"];
+
+  for (const key of localKeys) {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // no-op
+    }
+  }
+
+  for (const key of sessionKeys) {
+    try {
+      sessionStorage.removeItem(key);
+    } catch {
+      // no-op
+    }
+  }
 }
 
 export default function Profile() {
@@ -27,7 +89,10 @@ export default function Profile() {
 
   useEffect(() => {
     document.body.classList.add("app-bg");
-    return () => document.body.classList.remove("app-bg");
+
+    return () => {
+      document.body.classList.remove("app-bg");
+    };
   }, []);
 
   useEffect(() => {
@@ -36,18 +101,23 @@ export default function Profile() {
     }
   }, [user, navigate]);
 
+  const photoKey = useMemo(() => {
+    return getPhotoKey(user);
+  }, [user]);
+
   useEffect(() => {
     if (!user) return;
 
-    const savedPhoto = localStorage.getItem(getPhotoKey(user)) || "";
+    const savedPhoto = safeGetItem(photoKey);
     setPhoto(savedPhoto);
-  }, [user]);
+  }, [user, photoKey]);
 
   const roleInfo = useMemo(() => {
     const roles = {
       alumno: {
         label: "Alumno",
-        description: "Consulta tu rendimiento, tareas, recursos y plan de estudio.",
+        description:
+          "Consulta tu rendimiento, tareas, recursos y plan de estudio.",
         permissions: [
           "Ver calificaciones personales",
           "Consultar promedio general",
@@ -75,7 +145,8 @@ export default function Profile() {
       },
       administrador: {
         label: "Administrador",
-        description: "Gestiona usuarios, materias, asignaciones y configuración del sistema.",
+        description:
+          "Gestiona usuarios, materias, asignaciones y configuración del sistema.",
         permissions: [
           "Crear materias",
           "Asignar materias a docentes",
@@ -89,19 +160,21 @@ export default function Profile() {
       },
     };
 
-    return roles[user?.role] || {
-      label: "Usuario",
-      description: "Cuenta registrada en el sistema.",
-      permissions: ["Acceso general al sistema"],
-      primaryAction: {
-        label: "Ir al inicio",
-        to: "/app",
-      },
-    };
+    return (
+      roles[user?.role] || {
+        label: "Usuario",
+        description: "Cuenta registrada en el sistema.",
+        permissions: ["Acceso general al sistema"],
+        primaryAction: {
+          label: "Ir al inicio",
+          to: "/app",
+        },
+      }
+    );
   }, [user?.role]);
 
   const initials = useMemo(() => {
-    const name = String(user?.name || user?.nombre || user?.email || "Usuario").trim();
+    const name = String(getUserName(user)).trim();
 
     if (!name) return "PC";
 
@@ -140,15 +213,19 @@ export default function Profile() {
         title: "Archivo inválido",
         message: "Selecciona una imagen.",
       });
+
+      event.target.value = "";
       return;
     }
 
-    if (file.size > 1.5 * 1024 * 1024) {
+    if (file.size > MAX_PHOTO_SIZE) {
       showToast({
         type: "warning",
         title: "Imagen muy pesada",
         message: "Usa una imagen menor a 1.5 MB.",
       });
+
+      event.target.value = "";
       return;
     }
 
@@ -157,7 +234,31 @@ export default function Profile() {
     reader.onload = () => {
       const result = String(reader.result || "");
 
-      localStorage.setItem(getPhotoKey(user), result);
+      if (!result.startsWith("data:image/")) {
+        showToast({
+          type: "warning",
+          title: "Imagen inválida",
+          message: "No se pudo leer la imagen seleccionada.",
+        });
+
+        event.target.value = "";
+        return;
+      }
+
+      const saved = safeSetItem(photoKey, result);
+
+      if (!saved) {
+        showToast({
+          type: "error",
+          title: "No se pudo guardar",
+          message:
+            "El navegador no permitió guardar la foto. Intenta con una imagen más ligera.",
+        });
+
+        event.target.value = "";
+        return;
+      }
+
       setPhoto(result);
       notifyPhotoChange(result);
 
@@ -166,6 +267,18 @@ export default function Profile() {
         title: "Foto actualizada",
         message: "Tu foto de perfil se guardó en este navegador.",
       });
+
+      event.target.value = "";
+    };
+
+    reader.onerror = () => {
+      showToast({
+        type: "error",
+        title: "No se pudo leer",
+        message: "Intenta seleccionar otra imagen.",
+      });
+
+      event.target.value = "";
     };
 
     reader.readAsDataURL(file);
@@ -182,7 +295,7 @@ export default function Profile() {
 
     if (!ok) return;
 
-    localStorage.removeItem(getPhotoKey(user));
+    safeRemoveItem(photoKey);
     setPhoto("");
     notifyPhotoChange("");
 
@@ -204,7 +317,13 @@ export default function Profile() {
 
     if (!ok) return;
 
-    logout();
+    try {
+      logout?.();
+    } catch {
+      // Si el contexto falla, limpiamos manualmente abajo.
+    }
+
+    clearAuthStorage();
 
     showToast({
       type: "info",
@@ -218,7 +337,7 @@ export default function Profile() {
   if (!user) return null;
 
   const isAlumno = user.role === "alumno";
-  const displayName = user.name || user.nombre || "Usuario";
+  const displayName = getUserName(user);
 
   return (
     <>
@@ -254,7 +373,11 @@ export default function Profile() {
               </button>
 
               {photo && (
-                <button type="button" className="btn-del" onClick={onRemovePhoto}>
+                <button
+                  type="button"
+                  className="btn-del"
+                  onClick={onRemovePhoto}
+                >
                   Quitar
                 </button>
               )}
@@ -263,6 +386,7 @@ export default function Profile() {
 
           <div className="profileCleanInfo">
             <span className="profileEyebrow">Cuenta activa</span>
+
             <h1>{displayName}</h1>
 
             <p className="msg">
@@ -284,7 +408,11 @@ export default function Profile() {
                 Recursos
               </Link>
 
-              <button type="button" className="profileAction danger" onClick={onLogout}>
+              <button
+                type="button"
+                className="profileAction danger"
+                onClick={onLogout}
+              >
                 Cerrar sesión
               </button>
             </div>
@@ -295,7 +423,9 @@ export default function Profile() {
           <article className="card profilePanel">
             <div className="profileSectionHeader">
               <span className="profileSectionTag">Información</span>
+
               <h2>Datos de la cuenta</h2>
+
               <p>Datos principales registrados en el sistema.</p>
             </div>
 
@@ -339,7 +469,9 @@ export default function Profile() {
           <aside className="card profilePanel">
             <div className="profileSectionHeader">
               <span className="profileSectionTag">Permisos</span>
+
               <h2>Acceso del rol</h2>
+
               <p>Funciones principales disponibles para esta cuenta.</p>
             </div>
 

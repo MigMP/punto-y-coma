@@ -1,4 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+// Archivo: frontend/src/pages/Alumnos.jsx
+
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import NavBar from "../components/layout/NavBar.jsx";
 import { useAuth } from "../state/AuthContext.jsx";
@@ -7,21 +9,49 @@ import { useToast } from "../components/feedback/ToastProvider.jsx";
 import "../styles/dashboard.css";
 import "../styles/coach.css";
 
+function toArray(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.results)) return data.results;
+
+  return [];
+}
+
 function fmt(value) {
+  if (value === null || value === undefined || value === "") {
+    return "—";
+  }
+
   const n = Number(value);
   return Number.isFinite(n) ? n.toFixed(2) : "—";
 }
 
 function gradeClass(value) {
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+
   const n = Number(value);
+
   if (!Number.isFinite(n)) return "";
   if (n < 6) return "bad";
   if (n < 8) return "warn";
+
   return "ok";
+}
+
+function getUserName(user) {
+  return user?.nombre || user?.name || user?.email || "Usuario";
+}
+
+function getStudentName(alumno) {
+  return alumno?.nombre || alumno?.name || alumno?.email || "Alumno";
 }
 
 function academicStatus(value) {
   const n = Number(value);
+
   if (!Number.isFinite(n)) {
     return {
       className: "",
@@ -29,6 +59,7 @@ function academicStatus(value) {
       description: "Aún no tiene calificaciones registradas.",
     };
   }
+
   if (n < 6) {
     return {
       className: "bad",
@@ -36,6 +67,7 @@ function academicStatus(value) {
       description: "Necesita atención inmediata para evitar reprobación.",
     };
   }
+
   if (n < 8) {
     return {
       className: "warn",
@@ -43,6 +75,7 @@ function academicStatus(value) {
       description: "Tiene avance aceptable, pero requiere refuerzo.",
     };
   }
+
   return {
     className: "ok",
     label: "Estable",
@@ -53,7 +86,10 @@ function academicStatus(value) {
 export default function Alumnos() {
   const { user, token: ctxToken } = useAuth();
   const { showToast } = useToast();
-  const token = useMemo(() => ctxToken || localStorage.getItem("token") || "", [ctxToken]);
+
+  const token = useMemo(() => {
+    return ctxToken || localStorage.getItem("token") || "";
+  }, [ctxToken]);
 
   const [alumnos, setAlumnos] = useState([]);
   const [calificaciones, setCalificaciones] = useState([]);
@@ -64,22 +100,34 @@ export default function Alumnos() {
 
   useEffect(() => {
     document.body.classList.add("app-bg");
-    return () => document.body.classList.remove("app-bg");
+
+    return () => {
+      document.body.classList.remove("app-bg");
+    };
   }, []);
 
-  const loadAlumnos = async () => {
+  const loadAlumnos = useCallback(async () => {
+    if (!token) {
+      setAlumnos([]);
+      setCalificaciones([]);
+      setMaterias([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
-      const [alumnosData, calificacionesData, materiasData] = await Promise.all([
-        apiJSON("/alumnos", { token }),
-        apiJSON("/calificaciones", { token }),
-        apiJSON("/materias", { token }),
-      ]);
+      const [alumnosData, calificacionesData, materiasData] =
+        await Promise.all([
+          apiJSON("/alumnos", { token }),
+          apiJSON("/calificaciones", { token }),
+          apiJSON("/materias", { token }),
+        ]);
 
-      setAlumnos(Array.isArray(alumnosData) ? alumnosData : []);
-      setCalificaciones(Array.isArray(calificacionesData) ? calificacionesData : []);
-      setMaterias(Array.isArray(materiasData) ? materiasData : []);
+      setAlumnos(toArray(alumnosData));
+      setCalificaciones(toArray(calificacionesData));
+      setMaterias(toArray(materiasData));
     } catch (error) {
       showToast({
         type: "error",
@@ -89,19 +137,19 @@ export default function Alumnos() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, showToast]);
 
   useEffect(() => {
     loadAlumnos();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadAlumnos]);
 
   const alumnosAnalizados = useMemo(() => {
     return alumnos.map((alumno) => {
       const email = String(alumno.email || "").toLowerCase();
 
       const registros = calificaciones.filter(
-        (calificacion) => String(calificacion.alumnoEmail || "").toLowerCase() === email
+        (calificacion) =>
+          String(calificacion.alumnoEmail || "").toLowerCase() === email
       );
 
       const valores = registros
@@ -113,7 +161,11 @@ export default function Alumnos() {
         : null;
 
       const materiasEvaluadas = new Set(
-        registros.map((registro) => String(registro.materiaId || registro.materiaNombre || ""))
+        registros
+          .map((registro) =>
+            String(registro.materiaId || registro.materiaNombre || "")
+          )
+          .filter(Boolean)
       ).size;
 
       const materiasRiesgo = registros.filter(
@@ -123,11 +175,13 @@ export default function Alumnos() {
       const ultimoRegistro = [...registros].sort((a, b) => {
         const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
         const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+
         return dateB - dateA;
       })[0];
 
       return {
         ...alumno,
+        nombreVisible: getStudentName(alumno),
         promedio,
         registros: registros.length,
         materiasEvaluadas,
@@ -145,6 +199,7 @@ export default function Alumnos() {
     if (term) {
       data = data.filter((alumno) => {
         const searchable = [
+          alumno.nombre,
           alumno.name,
           alumno.email,
           alumno.grupo,
@@ -159,26 +214,41 @@ export default function Alumnos() {
     }
 
     data.sort((a, b) => {
+      const promedioA = Number.isFinite(a.promedio) ? a.promedio : null;
+      const promedioB = Number.isFinite(b.promedio) ? b.promedio : null;
+
       if (orden === "NOMBRE") {
-        return String(a.name || "").localeCompare(String(b.name || ""));
+        return String(a.nombreVisible || "").localeCompare(
+          String(b.nombreVisible || "")
+        );
       }
+
       if (orden === "PROMEDIO_DESC") {
-        return Number(b.promedio ?? -1) - Number(a.promedio ?? -1);
+        return Number(promedioB ?? -1) - Number(promedioA ?? -1);
       }
+
       if (orden === "PROMEDIO_ASC") {
-        return Number(a.promedio ?? 99) - Number(b.promedio ?? 99);
+        return Number(promedioA ?? 99) - Number(promedioB ?? 99);
       }
-      return Number(b.materiasRiesgo || 0) - Number(a.materiasRiesgo || 0);
+
+      if (b.materiasRiesgo !== a.materiasRiesgo) {
+        return Number(b.materiasRiesgo || 0) - Number(a.materiasRiesgo || 0);
+      }
+
+      return Number(promedioA ?? 99) - Number(promedioB ?? 99);
     });
 
     return data;
   }, [alumnosAnalizados, query, orden]);
 
   const resumen = useMemo(() => {
-    const conDatos = alumnosAnalizados.filter((alumno) => Number.isFinite(alumno.promedio));
+    const conDatos = alumnosAnalizados.filter((alumno) =>
+      Number.isFinite(alumno.promedio)
+    );
 
     const promedioGeneral = conDatos.length
-      ? conDatos.reduce((acc, alumno) => acc + alumno.promedio, 0) / conDatos.length
+      ? conDatos.reduce((acc, alumno) => acc + alumno.promedio, 0) /
+        conDatos.length
       : null;
 
     const riesgoAlto = conDatos.filter((alumno) => alumno.promedio < 6).length;
@@ -203,7 +273,7 @@ export default function Alumnos() {
     const lines = [
       "Seguimiento de alumnos - Punto y Coma",
       "",
-      `Usuario: ${user?.name || "Usuario"}`,
+      `Usuario: ${getUserName(user)}`,
       `Alumnos registrados: ${resumen.total}`,
       `Alumnos con calificaciones: ${resumen.conDatos}`,
       `Promedio general: ${fmt(resumen.promedioGeneral)}`,
@@ -214,7 +284,12 @@ export default function Alumnos() {
       "Alumnos con prioridad:",
       ...alumnosFiltrados
         .slice(0, 8)
-        .map((alumno) => `- ${alumno.name}: ${fmt(alumno.promedio)} (${alumno.status.label})`),
+        .map(
+          (alumno) =>
+            `- ${alumno.nombreVisible}: ${fmt(alumno.promedio)} (${
+              alumno.status.label
+            })`
+        ),
     ];
 
     try {
@@ -242,12 +317,19 @@ export default function Alumnos() {
         <section className="card row-between">
           <div>
             <h1>Seguimiento de alumnos</h1>
+
             <p className="msg">
-              {user?.name || "Usuario"} · Consulta alumnos, promedios, riesgos y registros académicos.
+              {getUserName(user)} · Consulta alumnos, promedios, riesgos y
+              registros académicos.
             </p>
           </div>
 
-          <button type="button" className="btn-ghost" onClick={loadAlumnos}>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={loadAlumnos}
+            disabled={loading}
+          >
             {loading ? "Cargando..." : "Actualizar"}
           </button>
         </section>
@@ -268,7 +350,9 @@ export default function Alumnos() {
 
             <div className="kpi">
               <div className="kpiTitle">Promedio</div>
-              <div className="kpiValue">{loading ? "..." : fmt(resumen.promedioGeneral)}</div>
+              <div className="kpiValue">
+                {loading ? "..." : fmt(resumen.promedioGeneral)}
+              </div>
             </div>
 
             <div className="kpi">
@@ -286,14 +370,19 @@ export default function Alumnos() {
               Buscar alumno
               <input
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(event) => setQuery(event.target.value)}
                 placeholder="Nombre, correo, grupo o boleta"
+                disabled={loading}
               />
             </label>
 
             <label>
               Ordenar por
-              <select value={orden} onChange={(e) => setOrden(e.target.value)}>
+              <select
+                value={orden}
+                onChange={(event) => setOrden(event.target.value)}
+                disabled={loading}
+              >
                 <option value="RIESGO">Mayor riesgo</option>
                 <option value="PROMEDIO_ASC">Promedio más bajo</option>
                 <option value="PROMEDIO_DESC">Promedio más alto</option>
@@ -303,7 +392,12 @@ export default function Alumnos() {
           </div>
 
           <div className="row planWrap planSpacingSmall">
-            <button type="button" className="btn-ghost" onClick={copyResumen}>
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={copyResumen}
+              disabled={loading || !alumnosFiltrados.length}
+            >
               Copiar resumen
             </button>
 
@@ -353,12 +447,17 @@ export default function Alumnos() {
             {alumnosFiltrados.map((alumno) => (
               <div className="item" key={alumno.email}>
                 <div className="textClamp">
-                  <strong>{alumno.name || "Alumno"}</strong>
+                  <strong>{alumno.nombreVisible}</strong>
+
                   <p className="muted">
-                    {alumno.email} · Grupo {alumno.grupo || "—"} · Boleta {alumno.boleta || "—"}
+                    {alumno.email} · Grupo {alumno.grupo || "—"} · Boleta{" "}
+                    {alumno.boleta || "—"}
                   </p>
+
                   <p className="muted">
-                    {alumno.registros} registro(s) · {alumno.materiasEvaluadas} materia(s) · {alumno.status.description}
+                    {alumno.registros} registro(s) ·{" "}
+                    {alumno.materiasEvaluadas} materia(s) ·{" "}
+                    {alumno.status.description}
                   </p>
                 </div>
 
@@ -383,7 +482,9 @@ export default function Alumnos() {
 
             {!alumnosFiltrados.length && (
               <p className="msg">
-                {loading ? "Cargando alumnos..." : "No hay alumnos que coincidan con la búsqueda."}
+                {loading
+                  ? "Cargando alumnos..."
+                  : "No hay alumnos que coincidan con la búsqueda."}
               </p>
             )}
           </div>
@@ -406,7 +507,9 @@ export default function Alumnos() {
 
             {!materias.length && (
               <p className="msg">
-                {loading ? "Cargando materias..." : "No hay materias registradas."}
+                {loading
+                  ? "Cargando materias..."
+                  : "No hay materias registradas."}
               </p>
             )}
           </div>

@@ -1,4 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+// Archivo: frontend/src/pages/Plan.jsx
+
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import NavBar from "../components/layout/NavBar.jsx";
 
@@ -6,21 +8,42 @@ import { useAuth } from "../state/AuthContext.jsx";
 import { apiJSON } from "../services/api.js";
 import { useToast } from "../components/feedback/ToastProvider.jsx";
 
-import { buildWeeklyPlan, computeInsights, planToText } from "../features/study/studyCoach.js";
+import {
+  buildWeeklyPlan,
+  computeInsights,
+  planToText,
+} from "../features/study/studyCoach.js";
 
 import "../styles/dashboard.css";
 import "../styles/coach.css";
+
+function toArray(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.results)) return data.results;
+
+  return [];
+}
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
 
 function fmt(value) {
+  if (value === null || value === undefined || value === "") {
+    return "—";
+  }
+
   const n = Number(value);
   return Number.isFinite(n) ? n.toFixed(2) : "—";
 }
 
 function gradeClass(value) {
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+
   const n = Number(value);
 
   if (!Number.isFinite(n)) return "";
@@ -52,6 +75,30 @@ function buildAdvice(avg) {
   return "Excelente desempeño: conserva el ritmo y refuerza con ejercicios más retadores.";
 }
 
+function getUserName(user) {
+  return user?.nombre || user?.name || user?.email || "Alumno";
+}
+
+function validateMeta(value) {
+  const clean = String(value || "").trim();
+
+  if (!clean) {
+    return "Ingresa una meta de promedio.";
+  }
+
+  if (!/^\d+(\.\d{1,2})?$/.test(clean)) {
+    return "La meta debe ser numérica y máximo con 2 decimales.";
+  }
+
+  const n = Number(clean);
+
+  if (!Number.isFinite(n) || n < 0 || n > 10) {
+    return "La meta debe ser un número entre 0 y 10.";
+  }
+
+  return "";
+}
+
 export default function Plan() {
   const { showToast } = useToast();
   const { user, token: ctxToken } = useAuth();
@@ -79,7 +126,14 @@ export default function Plan() {
   const [metaPromedio, setMetaPromedio] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const loadStudentData = async () => {
+  const loadStudentData = useCallback(async () => {
+    if (!token) {
+      setCalificaciones([]);
+      setMaterias([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -88,8 +142,8 @@ export default function Plan() {
         apiJSON("/materias", { token }),
       ]);
 
-      setCalificaciones(Array.isArray(calificacionesData) ? calificacionesData : []);
-      setMaterias(Array.isArray(materiasData) ? materiasData : []);
+      setCalificaciones(toArray(calificacionesData));
+      setMaterias(toArray(materiasData));
     } catch (error) {
       showToast({
         type: "error",
@@ -99,12 +153,11 @@ export default function Plan() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, showToast]);
 
   useEffect(() => {
     loadStudentData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadStudentData]);
 
   useEffect(() => {
     try {
@@ -113,7 +166,7 @@ export default function Plan() {
       if (raw != null && raw !== "") {
         const n = Number(raw);
 
-        if (Number.isFinite(n)) {
+        if (Number.isFinite(n) && n >= 0 && n <= 10) {
           setMetaPromedio(n);
           setMetaInput(String(n));
           return;
@@ -128,16 +181,35 @@ export default function Plan() {
     }
   }, [metaKey]);
 
-  const insights = useMemo(() => computeInsights(calificaciones), [calificaciones]);
-  const plan = useMemo(() => buildWeeklyPlan(calificaciones, 6), [calificaciones]);
+  const insights = useMemo(() => {
+    return computeInsights(calificaciones);
+  }, [calificaciones]);
 
-  const promedioGeneral = Number.isFinite(insights.overall) ? insights.overall : 0;
-  const progreso = clamp((promedioGeneral / 10) * 100, 0, 100);
+  const plan = useMemo(() => {
+    return buildWeeklyPlan(calificaciones, 6);
+  }, [calificaciones]);
+
+  const promedioGeneral = Number.isFinite(insights.overall)
+    ? insights.overall
+    : null;
+
+  const progreso = Number.isFinite(promedioGeneral)
+    ? clamp((promedioGeneral / 10) * 100, 0, 100)
+    : 0;
 
   const riskLevel = useMemo(() => {
     const riskCount = insights.risk.length;
+    const promedio = Number(promedioGeneral);
 
-    if (promedioGeneral < 6 || riskCount >= 2) {
+    if (!Number.isFinite(promedio)) {
+      return {
+        cls: "med",
+        label: "Sin datos",
+        message: "Aún no hay calificaciones suficientes para calcular tu riesgo académico.",
+      };
+    }
+
+    if (promedio < 6 || riskCount >= 2) {
       return {
         cls: "high",
         label: "Riesgo alto",
@@ -145,7 +217,7 @@ export default function Plan() {
       };
     }
 
-    if (promedioGeneral < 8 || riskCount === 1) {
+    if (promedio < 8 || riskCount === 1) {
       return {
         cls: "med",
         label: "Riesgo medio",
@@ -226,7 +298,9 @@ export default function Plan() {
   }, [materiaStats]);
 
   const metaStatus = useMemo(() => {
-    if (!Number.isFinite(metaPromedio)) return null;
+    if (!Number.isFinite(metaPromedio) || !Number.isFinite(promedioGeneral)) {
+      return null;
+    }
 
     const diff = Number((metaPromedio - promedioGeneral).toFixed(2));
 
@@ -244,16 +318,18 @@ export default function Plan() {
   }, [metaPromedio, promedioGeneral]);
 
   const saveMeta = () => {
-    const n = Number(metaInput);
+    const error = validateMeta(metaInput);
 
-    if (!Number.isFinite(n) || n < 0 || n > 10) {
+    if (error) {
       showToast({
         type: "warning",
         title: "Meta inválida",
-        message: "La meta debe ser un número entre 0 y 10.",
+        message: error,
       });
       return;
     }
+
+    const n = Number(metaInput);
 
     setMetaPromedio(n);
 
@@ -296,7 +372,7 @@ export default function Plan() {
 
     const text =
       `Plan de estudio - Punto y Coma\n\n` +
-      `Alumno: ${user?.name || "Alumno"}\n` +
+      `Alumno: ${getUserName(user)}\n` +
       `Promedio general: ${fmt(promedioGeneral)}\n` +
       `Semáforo: ${riskLevel.label}\n` +
       `Materias en riesgo: ${materiasRiesgo.length}\n` +
@@ -334,13 +410,20 @@ export default function Plan() {
         <section className="card row-between">
           <div>
             <h1>Plan de estudio</h1>
+
             <p className="msg">
-              {user?.name || "Alumno"} · Recomendaciones automáticas según tus calificaciones.
+              {getUserName(user)} · Recomendaciones automáticas según tus
+              calificaciones.
             </p>
           </div>
 
-          <button type="button" className="btn-ghost" onClick={loadStudentData}>
-            Actualizar datos
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={loadStudentData}
+            disabled={loading}
+          >
+            {loading ? "Cargando..." : "Actualizar datos"}
           </button>
         </section>
 
@@ -350,7 +433,10 @@ export default function Plan() {
           <div className="coachRow">
             <div className="kpi">
               <div className="kpiTitle">Promedio general</div>
-              <div className="kpiValue">{loading ? "..." : fmt(promedioGeneral)}</div>
+
+              <div className="kpiValue">
+                {loading ? "..." : fmt(promedioGeneral)}
+              </div>
             </div>
 
             <div className="kpi">
@@ -382,7 +468,10 @@ export default function Plan() {
             </div>
 
             <div className="progress planSpacingSmall">
-              <div style={{ "--progress": `${progreso}%` }} className="progressFill" />
+              <div
+                style={{ "--progress": `${progreso}%` }}
+                className="progressFill"
+              />
             </div>
           </div>
         </section>
@@ -393,21 +482,28 @@ export default function Plan() {
           <div className="row planWrap">
             <label className="metaLabel">
               <span className="muted">Meta de promedio</span>
+
               <input
                 className="metaInput"
                 inputMode="decimal"
                 value={metaInput}
-                onChange={(e) => setMetaInput(e.target.value)}
+                onChange={(event) => setMetaInput(event.target.value)}
                 placeholder="Ej. 8.5"
+                disabled={loading}
               />
             </label>
 
             <div className="row metaActions">
-              <button type="button" onClick={saveMeta}>
+              <button type="button" onClick={saveMeta} disabled={loading}>
                 Guardar meta
               </button>
 
-              <button type="button" className="btn-del" onClick={clearMeta}>
+              <button
+                type="button"
+                className="btn-del"
+                onClick={clearMeta}
+                disabled={loading}
+              >
                 Quitar
               </button>
             </div>
@@ -416,7 +512,8 @@ export default function Plan() {
           <div className="planSpacingSmall">
             {!metaStatus && (
               <p className="msg">
-                Todavía no tienes una meta guardada. Agrega una para medir tu avance.
+                Todavía no tienes una meta guardada o aún no hay promedio para
+                compararla.
               </p>
             )}
 
@@ -439,7 +536,11 @@ export default function Plan() {
               <div className="muted">{prioridadSemana}</div>
             </div>
 
-            <span className={`badge ${materiasRiesgo.length ? "warn" : gradeClass(promedioGeneral)}`}>
+            <span
+              className={`badge ${
+                materiasRiesgo.length ? "warn" : gradeClass(promedioGeneral)
+              }`}
+            >
               {materiasRiesgo.length ? "Reforzar" : "Mantener"}
             </span>
           </div>
@@ -449,11 +550,17 @@ export default function Plan() {
           <h2>Plan semanal automático</h2>
 
           <p className="msg">
-            El plan se genera con tus materias más bajas para ayudarte a estudiar con más intención.
+            El plan se genera con tus materias más bajas para ayudarte a
+            estudiar con más intención.
           </p>
 
           <div className="row planWrap planSpacingSmall">
-            <button type="button" className="btn-ghost" onClick={copyPlan}>
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={copyPlan}
+              disabled={loading || !plan.length}
+            >
               Copiar plan
             </button>
 
@@ -467,9 +574,11 @@ export default function Plan() {
               <div className="planItem" key={`${p.materia}-${index}`}>
                 <div className="planLeft">
                   <div className="planMateria">{p.materia}</div>
+
                   <div className="planMeta">
                     {p.day} · {p.time}
                   </div>
+
                   <div className="muted">{p.goal}</div>
                 </div>
 
@@ -479,7 +588,9 @@ export default function Plan() {
 
             {!plan.length && (
               <div className="msg">
-                {loading ? "Generando plan..." : "Aún no hay calificaciones suficientes para generar un plan."}
+                {loading
+                  ? "Generando plan..."
+                  : "Aún no hay calificaciones suficientes para generar un plan."}
               </div>
             )}
           </div>
@@ -493,6 +604,7 @@ export default function Plan() {
               <div className="item" key={materia.materiaId}>
                 <div className="textClamp">
                   <strong>{materia.materia}</strong>
+
                   <div className="muted">
                     {materia.count} registro(s) · {materia.advice}
                   </div>
@@ -508,7 +620,9 @@ export default function Plan() {
 
             {!materiaStats.length && (
               <div className="msg">
-                {loading ? "Cargando materias..." : "Todavía no tienes calificaciones registradas."}
+                {loading
+                  ? "Cargando materias..."
+                  : "Todavía no tienes calificaciones registradas."}
               </div>
             )}
           </div>
@@ -522,6 +636,7 @@ export default function Plan() {
               <div className="item" key={materia.materiaId}>
                 <div>
                   <strong>{materia.materia}</strong>
+
                   <div className="muted">
                     Esta materia está entre tus mejores resultados registrados.
                   </div>

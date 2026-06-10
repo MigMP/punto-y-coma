@@ -1,19 +1,25 @@
 {
   "name": "punto-y-coma-backend",
   "version": "2.0.0",
-  "description": "API de Punto y Coma para autenticación, materias, asignaciones y calificaciones.",
+  "description": "API REST de Punto y Coma Académico para autenticación, usuarios, materias, asignaciones, calificaciones, tareas, recursos, calendario, notificaciones y analíticas.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "health": "node -e \"fetch('http://localhost:3001/api/health').then(r=>r.json()).then(console.log).catch(console.error)\"",
+    "audit:safe": "npm audit"
   },
   "keywords": [
     "node",
     "express",
     "academic",
-    "grades"
+    "grades",
+    "firebase",
+    "firestore",
+    "jwt",
+    "render"
   ],
-  "author": "",
+  "author": "Miguel Miranda",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
@@ -22,9 +28,13 @@
     "dotenv": "^16.4.7",
     "express": "^5.2.1",
     "firebase-admin": "^13.10.0",
+    "helmet": "^8.2.0",
     "jsonwebtoken": "^9.0.3"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

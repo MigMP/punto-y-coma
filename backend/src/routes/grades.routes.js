@@ -1,3 +1,5 @@
+// Archivo: backend/src/routes/grades.routes.js
+
 const express = require("express");
 
 const {
@@ -12,13 +14,71 @@ const { ROLES } = require("../utils/roles");
 
 const router = express.Router();
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_GRADE = 0;
+const MAX_GRADE = 10;
+const MAX_DECIMALS = 2;
+
 function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
 }
 
-function isValidGrade(value) {
-  const n = Number(value);
-  return Number.isFinite(n) && n >= 0 && n <= 10;
+function parsePositiveId(value) {
+  const id = Number(value);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    return null;
+  }
+
+  return id;
+}
+
+function parseGrade(value) {
+  const raw = String(value ?? "").trim();
+
+  if (!raw) {
+    return {
+      ok: false,
+      error: "La calificación es obligatoria",
+    };
+  }
+
+  if (!/^\d+(\.\d+)?$/.test(raw)) {
+    return {
+      ok: false,
+      error: "La calificación debe ser un número válido",
+    };
+  }
+
+  const numberValue = Number(raw);
+
+  if (!Number.isFinite(numberValue)) {
+    return {
+      ok: false,
+      error: "La calificación debe ser un número válido",
+    };
+  }
+
+  if (numberValue < MIN_GRADE || numberValue > MAX_GRADE) {
+    return {
+      ok: false,
+      error: `La calificación debe estar entre ${MIN_GRADE} y ${MAX_GRADE}`,
+    };
+  }
+
+  const decimals = raw.includes(".") ? raw.split(".")[1].length : 0;
+
+  if (decimals > MAX_DECIMALS) {
+    return {
+      ok: false,
+      error: `La calificación no debe tener más de ${MAX_DECIMALS} decimales`,
+    };
+  }
+
+  return {
+    ok: true,
+    value: Number(numberValue.toFixed(MAX_DECIMALS)),
+  };
 }
 
 function isMaestroAsignadoA(asignaciones, materiaId, maestroEmail) {
@@ -42,7 +102,19 @@ function findAlumno(users, email) {
   return users.find(
     (user) =>
       normalizeEmail(user.email) === alumnoEmail &&
-      user.role === ROLES.ALUMNO
+      user.role === ROLES.ALUMNO &&
+      (!user.status || user.status === "active")
+  );
+}
+
+function findExistingGrade(calificaciones, alumnoEmail, materiaId) {
+  const email = normalizeEmail(alumnoEmail);
+  const id = Number(materiaId);
+
+  return calificaciones.find(
+    (calificacion) =>
+      normalizeEmail(calificacion.alumnoEmail) === email &&
+      Number(calificacion.materiaId) === id
   );
 }
 
@@ -165,12 +237,12 @@ router.post("/calificaciones", auth, requireRole(ROLES.MAESTRO), async (req, res
     ]);
 
     const alumnoEmail = normalizeEmail(req.body.alumnoEmail);
-    const materiaId = Number(req.body.materiaId);
-    const calificacion = Number(req.body.calificacion);
+    const materiaId = parsePositiveId(req.body.materiaId);
+    const gradeResult = parseGrade(req.body.calificacion);
 
-    if (!alumnoEmail) {
+    if (!alumnoEmail || !EMAIL_RE.test(alumnoEmail)) {
       return res.status(400).json({
-        error: "Correo del alumno obligatorio",
+        error: "Correo del alumno inválido",
       });
     }
 
@@ -178,11 +250,11 @@ router.post("/calificaciones", auth, requireRole(ROLES.MAESTRO), async (req, res
 
     if (!alumno) {
       return res.status(404).json({
-        error: "No existe un alumno registrado con ese correo",
+        error: "No existe un alumno activo registrado con ese correo",
       });
     }
 
-    if (!Number.isFinite(materiaId)) {
+    if (!materiaId) {
       return res.status(400).json({
         error: "materiaId inválido",
       });
@@ -202,12 +274,26 @@ router.post("/calificaciones", auth, requireRole(ROLES.MAESTRO), async (req, res
       });
     }
 
-    if (!isValidGrade(calificacion)) {
+    if (!gradeResult.ok) {
       return res.status(400).json({
-        error: "La calificación debe ser un número entre 0 y 10",
+        error: gradeResult.error,
       });
     }
 
+    const calificacionExistente = findExistingGrade(
+      calificaciones,
+      alumno.email,
+      materiaId
+    );
+
+    if (calificacionExistente) {
+      return res.status(409).json({
+        error:
+          "Ese alumno ya tiene una calificación registrada para esta materia. Usa editar en lugar de crear otra.",
+      });
+    }
+
+    const calificacion = gradeResult.value;
     const now = new Date().toISOString();
 
     const nueva = {
@@ -258,9 +344,9 @@ router.post("/calificaciones", auth, requireRole(ROLES.MAESTRO), async (req, res
 
 router.patch("/calificaciones/:id", auth, requireRole(ROLES.MAESTRO), async (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const id = parsePositiveId(req.params.id);
 
-    if (!Number.isFinite(id)) {
+    if (!id) {
       return res.status(400).json({
         error: "ID inválido",
       });
@@ -288,16 +374,23 @@ router.patch("/calificaciones/:id", auth, requireRole(ROLES.MAESTRO), async (req
       });
     }
 
-    const calificacion = Number(req.body.calificacion);
+    const gradeResult = parseGrade(req.body.calificacion);
 
-    if (!isValidGrade(calificacion)) {
+    if (!gradeResult.ok) {
       return res.status(400).json({
-        error: "La calificación debe ser un número entre 0 y 10",
+        error: gradeResult.error,
       });
     }
 
+    const calificacion = gradeResult.value;
     const materia = findMateria(materias, current.materiaId);
     const anterior = current.calificacion;
+
+    if (Number(anterior) === Number(calificacion)) {
+      return res.status(400).json({
+        error: "La nueva calificación es igual a la anterior",
+      });
+    }
 
     const updated = {
       ...current,
@@ -346,9 +439,9 @@ router.patch("/calificaciones/:id", auth, requireRole(ROLES.MAESTRO), async (req
 
 router.delete("/calificaciones/:id", auth, requireRole(ROLES.MAESTRO), async (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const id = parsePositiveId(req.params.id);
 
-    if (!Number.isFinite(id)) {
+    if (!id) {
       return res.status(400).json({
         error: "ID inválido",
       });

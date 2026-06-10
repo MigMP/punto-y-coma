@@ -1,4 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+// Archivo: frontend/src/pages/Reportes.jsx
+
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import NavBar from "../components/layout/NavBar.jsx";
 import { useAuth } from "../state/AuthContext.jsx";
 import { apiJSON } from "../services/api.js";
@@ -6,25 +8,65 @@ import { useToast } from "../components/feedback/ToastProvider.jsx";
 import "../styles/dashboard.css";
 import "../styles/coach.css";
 
+function toArray(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.results)) return data.results;
+
+  return [];
+}
+
 function fmt(value) {
+  if (value === null || value === undefined || value === "") {
+    return "—";
+  }
+
   const n = Number(value);
   return Number.isFinite(n) ? n.toFixed(2) : "—";
 }
 
 function gradeClass(value) {
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+
   const n = Number(value);
+
   if (!Number.isFinite(n)) return "";
   if (n < 6) return "bad";
   if (n < 8) return "warn";
+
   return "ok";
 }
 
 function statusText(value) {
   const n = Number(value);
+
   if (!Number.isFinite(n)) return "Sin datos";
   if (n < 6) return "Riesgo alto";
   if (n < 8) return "En observación";
+
   return "Estable";
+}
+
+function getUserName(user) {
+  return user?.nombre || user?.name || user?.email || "Usuario";
+}
+
+function formatDate(value) {
+  if (!value) return "";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("es-MX", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 }
 
 function csvEscape(value) {
@@ -34,7 +76,10 @@ function csvEscape(value) {
 
 function downloadCSV(filename, rows) {
   const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\n");
-  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+  const blob = new Blob(["\ufeff" + csv], {
+    type: "text/csv;charset=utf-8;",
+  });
+
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
 
@@ -49,7 +94,11 @@ function downloadCSV(filename, rows) {
 export default function Reportes() {
   const { user, token: ctxToken } = useAuth();
   const { showToast } = useToast();
-  const token = useMemo(() => ctxToken || localStorage.getItem("token") || "", [ctxToken]);
+
+  const token = useMemo(() => {
+    return ctxToken || localStorage.getItem("token") || "";
+  }, [ctxToken]);
+
   const [materias, setMaterias] = useState([]);
   const [calificaciones, setCalificaciones] = useState([]);
   const [filtroMateria, setFiltroMateria] = useState("ALL");
@@ -57,10 +106,20 @@ export default function Reportes() {
 
   useEffect(() => {
     document.body.classList.add("app-bg");
-    return () => document.body.classList.remove("app-bg");
+
+    return () => {
+      document.body.classList.remove("app-bg");
+    };
   }, []);
 
-  const loadReportes = async () => {
+  const loadReportes = useCallback(async () => {
+    if (!token) {
+      setMaterias([]);
+      setCalificaciones([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -69,8 +128,8 @@ export default function Reportes() {
         apiJSON("/calificaciones", { token }),
       ]);
 
-      setMaterias(Array.isArray(materiasData) ? materiasData : []);
-      setCalificaciones(Array.isArray(calificacionesData) ? calificacionesData : []);
+      setMaterias(toArray(materiasData));
+      setCalificaciones(toArray(calificacionesData));
     } catch (error) {
       showToast({
         type: "error",
@@ -80,16 +139,18 @@ export default function Reportes() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, showToast]);
 
   useEffect(() => {
     loadReportes();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadReportes]);
 
   const calificacionesFiltradas = useMemo(() => {
     if (filtroMateria === "ALL") return calificaciones;
-    return calificaciones.filter((item) => String(item.materiaId) === String(filtroMateria));
+
+    return calificaciones.filter(
+      (item) => String(item.materiaId) === String(filtroMateria)
+    );
   }, [calificaciones, filtroMateria]);
 
   const materiaStats = useMemo(() => {
@@ -116,12 +177,19 @@ export default function Reportes() {
       }
 
       map.get(materiaId).valores.push(calificacion);
-      map.get(materiaId).alumnos.add(String(item.alumnoEmail || "").toLowerCase());
+
+      const alumnoEmail = String(item.alumnoEmail || "").toLowerCase();
+
+      if (alumnoEmail) {
+        map.get(materiaId).alumnos.add(alumnoEmail);
+      }
     }
 
     return [...map.values()]
       .map((item) => {
-        const promedio = item.valores.reduce((acc, value) => acc + value, 0) / item.valores.length;
+        const promedio =
+          item.valores.reduce((acc, value) => acc + value, 0) /
+          item.valores.length;
         const min = Math.min(...item.valores);
         const max = Math.max(...item.valores);
 
@@ -157,12 +225,16 @@ export default function Reportes() {
       }
 
       map.get(email).valores.push(calificacion);
-      map.get(email).materias.add(String(item.materiaNombre || item.materiaId || "Materia"));
+      map
+        .get(email)
+        .materias.add(String(item.materiaNombre || item.materiaId || "Materia"));
     }
 
     return [...map.values()]
       .map((item) => {
-        const promedio = item.valores.reduce((acc, value) => acc + value, 0) / item.valores.length;
+        const promedio =
+          item.valores.reduce((acc, value) => acc + value, 0) /
+          item.valores.length;
 
         return {
           email: item.email,
@@ -180,7 +252,10 @@ export default function Reportes() {
       .map((item) => Number(item.calificacion))
       .filter(Number.isFinite);
 
-    const promedio = valores.length ? valores.reduce((a, b) => a + b, 0) / valores.length : null;
+    const promedio = valores.length
+      ? valores.reduce((a, b) => a + b, 0) / valores.length
+      : null;
+
     const reprobadas = valores.filter((value) => value < 6).length;
     const riesgo = valores.filter((value) => value >= 6 && value < 8).length;
     const estables = valores.filter((value) => value >= 8).length;
@@ -200,7 +275,7 @@ export default function Reportes() {
     const lines = [
       "Reporte académico - Punto y Coma",
       "",
-      `Usuario: ${user?.name || "Usuario"}`,
+      `Usuario: ${getUserName(user)}`,
       `Promedio general: ${fmt(resumen.promedio)}`,
       `Registros analizados: ${resumen.registros}`,
       `Alumnos evaluados: ${resumen.alumnos}`,
@@ -208,7 +283,12 @@ export default function Reportes() {
       `En riesgo alto: ${resumen.reprobadas}`,
       "",
       "Promedio por materia:",
-      ...materiaStats.map((item) => `- ${item.materia}: ${fmt(item.promedio)} (${statusText(item.promedio)})`),
+      ...materiaStats.map(
+        (item) =>
+          `- ${item.materia}: ${fmt(item.promedio)} (${statusText(
+            item.promedio
+          )})`
+      ),
     ];
 
     try {
@@ -229,6 +309,15 @@ export default function Reportes() {
   };
 
   const exportSummaryCSV = () => {
+    if (!resumen.registros) {
+      showToast({
+        type: "info",
+        title: "Sin datos",
+        message: "No hay datos suficientes para exportar el resumen.",
+      });
+      return;
+    }
+
     const rows = [
       ["Tipo", "Indicador", "Valor"],
       ["Resumen", "Promedio general", fmt(resumen.promedio)],
@@ -239,7 +328,15 @@ export default function Reportes() {
       ["Resumen", "En observación", resumen.riesgo],
       ["Resumen", "Estables", resumen.estables],
       [],
-      ["Materia", "Promedio", "Estado", "Registros", "Alumnos", "Mínimo", "Máximo"],
+      [
+        "Materia",
+        "Promedio",
+        "Estado",
+        "Registros",
+        "Alumnos",
+        "Mínimo",
+        "Máximo",
+      ],
       ...materiaStats.map((item) => [
         item.materia,
         fmt(item.promedio),
@@ -261,16 +358,33 @@ export default function Reportes() {
   };
 
   const exportGradesCSV = () => {
+    if (!calificacionesFiltradas.length) {
+      showToast({
+        type: "info",
+        title: "Sin calificaciones",
+        message: "No hay calificaciones para exportar.",
+      });
+      return;
+    }
+
     const rows = [
-      ["Alumno", "Correo", "Materia", "Calificación", "Estado", "Fecha creación", "Última actualización"],
+      [
+        "Alumno",
+        "Correo",
+        "Materia",
+        "Calificación",
+        "Estado",
+        "Fecha creación",
+        "Última actualización",
+      ],
       ...calificacionesFiltradas.map((item) => [
         item.alumnoNombre || "",
         item.alumnoEmail || "",
         item.materiaNombre || item.materiaId || "",
         fmt(item.calificacion),
         statusText(item.calificacion),
-        item.createdAt || "",
-        item.updatedAt || "",
+        formatDate(item.createdAt),
+        formatDate(item.updatedAt),
       ]),
     ];
 
@@ -290,16 +404,24 @@ export default function Reportes() {
   return (
     <>
       <NavBar />
+
       <main className="container">
         <section className="card row-between">
           <div>
             <h1>Reportes académicos</h1>
+
             <p className="msg">
-              {user?.name || "Usuario"} · Análisis general de rendimiento, materias y alumnos.
+              {getUserName(user)} · Análisis general de rendimiento, materias y
+              alumnos.
             </p>
           </div>
 
-          <button type="button" className="btn-ghost" onClick={loadReportes}>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={loadReportes}
+            disabled={loading}
+          >
             {loading ? "Cargando..." : "Actualizar"}
           </button>
         </section>
@@ -310,8 +432,14 @@ export default function Reportes() {
           <div className="row planWrap">
             <label className="metaLabel">
               <span className="muted">Materia</span>
-              <select value={filtroMateria} onChange={(e) => setFiltroMateria(e.target.value)}>
+
+              <select
+                value={filtroMateria}
+                onChange={(event) => setFiltroMateria(event.target.value)}
+                disabled={loading}
+              >
                 <option value="ALL">Todas las materias</option>
+
                 {materias.map((materia) => (
                   <option key={materia.id} value={materia.id}>
                     {materia.nombre}
@@ -321,15 +449,30 @@ export default function Reportes() {
             </label>
 
             <div className="row metaActions">
-              <button type="button" className="btn-ghost" onClick={copyReport}>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={copyReport}
+                disabled={loading || !resumen.registros}
+              >
                 Copiar reporte
               </button>
 
-              <button type="button" className="btn-ghost" onClick={exportSummaryCSV}>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={exportSummaryCSV}
+                disabled={loading || !resumen.registros}
+              >
                 Exportar resumen CSV
               </button>
 
-              <button type="button" className="btn-ghost" onClick={exportGradesCSV}>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={exportGradesCSV}
+                disabled={loading || !calificacionesFiltradas.length}
+              >
                 Exportar calificaciones CSV
               </button>
 
@@ -346,7 +489,10 @@ export default function Reportes() {
           <div className="coachRow">
             <div className="kpi">
               <div className="kpiTitle">Promedio</div>
-              <div className="kpiValue">{loading ? "..." : fmt(resumen.promedio)}</div>
+
+              <div className="kpiValue">
+                {loading ? "..." : fmt(resumen.promedio)}
+              </div>
             </div>
 
             <div className="kpi">
@@ -407,8 +553,11 @@ export default function Reportes() {
               <div className="item" key={materia.materiaId}>
                 <div className="textClamp">
                   <strong>{materia.materia}</strong>
+
                   <p className="muted">
-                    {materia.registros} registro(s) · {materia.alumnos} alumno(s) · mínimo {fmt(materia.min)} · máximo {fmt(materia.max)}
+                    {materia.registros} registro(s) · {materia.alumnos}{" "}
+                    alumno(s) · mínimo {fmt(materia.min)} · máximo{" "}
+                    {fmt(materia.max)}
                   </p>
                 </div>
 
@@ -420,7 +569,9 @@ export default function Reportes() {
 
             {!materiaStats.length && (
               <p className="msg">
-                {loading ? "Cargando reporte..." : "No hay datos suficientes para mostrar materias."}
+                {loading
+                  ? "Cargando reporte..."
+                  : "No hay datos suficientes para mostrar materias."}
               </p>
             )}
           </div>
@@ -434,8 +585,10 @@ export default function Reportes() {
               <div className="item" key={alumno.email}>
                 <div className="textClamp">
                   <strong>{alumno.nombre}</strong>
+
                   <p className="muted">
-                    {alumno.email} · {alumno.registros} registro(s) · {alumno.materias} materia(s)
+                    {alumno.email} · {alumno.registros} registro(s) ·{" "}
+                    {alumno.materias} materia(s)
                   </p>
                 </div>
 

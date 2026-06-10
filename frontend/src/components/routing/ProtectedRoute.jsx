@@ -1,7 +1,25 @@
+// Archivo: frontend/src/components/routing/ProtectedRoute.jsx
+
 import React, { useMemo } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 
 import { useAuth } from "../../state/AuthContext.jsx";
+
+function getStoredUser() {
+  try {
+    return JSON.parse(localStorage.getItem("user") || "null");
+  } catch {
+    return null;
+  }
+}
+
+function getDefaultPathByRole(role) {
+  if (role === "alumno") return "/plan";
+  if (role === "maestro") return "/capturar";
+  if (role === "administrador") return "/admin";
+
+  return "/app";
+}
 
 export default function ProtectedRoute({ children, allowedRoles = [] }) {
   const location = useLocation();
@@ -12,13 +30,7 @@ export default function ProtectedRoute({ children, allowedRoles = [] }) {
   }, [ctxToken]);
 
   const user = useMemo(() => {
-    if (ctxUser) return ctxUser;
-
-    try {
-      return JSON.parse(localStorage.getItem("user") || "null");
-    } catch {
-      return null;
-    }
+    return ctxUser || getStoredUser();
   }, [ctxUser]);
 
   if (!token) {
@@ -38,7 +50,7 @@ export default function ProtectedRoute({ children, allowedRoles = [] }) {
   const role = user?.role;
 
   if (!role || !allowedRoles.includes(role)) {
-    return <Navigate to="/app" replace />;
+    return <Navigate to={getDefaultPathByRole(role)} replace />;
   }
 
   return children;

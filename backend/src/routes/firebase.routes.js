@@ -1,3 +1,5 @@
+// Archivo: backend/src/routes/firebase.routes.js
+
 const fs = require("fs");
 const path = require("path");
 const express = require("express");
@@ -37,6 +39,28 @@ function getServiceAccountStatus() {
   };
 }
 
+function buildMigrationSummary(jsonData) {
+  return {
+    users: Array.isArray(jsonData.users) ? jsonData.users.length : 0,
+    materias: Array.isArray(jsonData.materias) ? jsonData.materias.length : 0,
+    calificaciones: Array.isArray(jsonData.calificaciones)
+      ? jsonData.calificaciones.length
+      : 0,
+    asignaciones: Array.isArray(jsonData.asignaciones)
+      ? jsonData.asignaciones.length
+      : 0,
+    actividad: Array.isArray(jsonData.actividad) ? jsonData.actividad.length : 0,
+    tareas: Array.isArray(jsonData.tareas) ? jsonData.tareas.length : 0,
+    notificaciones: Array.isArray(jsonData.notificaciones)
+      ? jsonData.notificaciones.length
+      : 0,
+    recursos: Array.isArray(jsonData.recursos) ? jsonData.recursos.length : 0,
+    calendario: Array.isArray(jsonData.calendario)
+      ? jsonData.calendario.length
+      : 0,
+  };
+}
+
 router.get("/firebase/status", auth, requireRole(ROLES.ADMIN), async (req, res) => {
   const enabled = shouldUseFirebase();
   const serviceAccount = getServiceAccountStatus();
@@ -54,8 +78,8 @@ router.get("/firebase/status", auth, requireRole(ROLES.ADMIN), async (req, res) 
       ? "service_account_file"
       : "variables_env",
     mensaje: enabled
-      ? "Firebase está activado. El backend intentará usar Firestore."
-      : "Firebase está preparado, pero el sistema sigue usando JSON local.",
+      ? "Firebase está activado. El backend usa Firestore como base de datos principal."
+      : "Firebase está preparado, pero el sistema está usando JSON local.",
   };
 
   if (!enabled) {
@@ -86,42 +110,39 @@ router.get("/firebase/status", auth, requireRole(ROLES.ADMIN), async (req, res) 
   }
 });
 
-router.post("/firebase/migrate-json", auth, requireRole(ROLES.ADMIN), async (req, res) => {
-  if (!shouldUseFirebase()) {
-    return res.status(400).json({
-      error: "Firebase no está activado.",
-      detalle: "Para migrar datos, configura USE_FIREBASE=true en el archivo .env.",
-    });
+router.post(
+  "/firebase/migrate-json",
+  auth,
+  requireRole(ROLES.ADMIN),
+  async (req, res) => {
+    if (!shouldUseFirebase()) {
+      return res.status(400).json({
+        error: "Firebase no está activado.",
+        detalle:
+          "Para migrar datos, configura USE_FIREBASE=true en el archivo .env.",
+      });
+    }
+
+    try {
+      const jsonData = loadDB();
+      const resumen = buildMigrationSummary(jsonData);
+
+      await saveFirebaseDB(jsonData);
+
+      return res.json({
+        ok: true,
+        message: "Datos migrados de JSON local a Firestore correctamente.",
+        resumen,
+        migratedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      return res.status(500).json({
+        ok: false,
+        error: "No se pudo migrar JSON a Firebase.",
+        detalle: error.message,
+      });
+    }
   }
-
-  try {
-    const jsonData = loadDB();
-
-    const resumen = {
-      users: jsonData.users.length,
-      materias: jsonData.materias.length,
-      calificaciones: jsonData.calificaciones.length,
-      asignaciones: jsonData.asignaciones.length,
-      actividad: jsonData.actividad.length,
-      tareas: jsonData.tareas.length,
-      notificaciones: jsonData.notificaciones.length,
-    };
-
-    await saveFirebaseDB(jsonData);
-
-    return res.json({
-      ok: true,
-      message: "Datos migrados de JSON local a Firestore correctamente.",
-      resumen,
-      migratedAt: new Date().toISOString(),
-    });
-  } catch (error) {
-    return res.status(500).json({
-      ok: false,
-      error: "No se pudo migrar JSON a Firebase.",
-      detalle: error.message,
-    });
-  }
-});
+);
 
 module.exports = router;

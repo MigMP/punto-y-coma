@@ -1,4 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+// Archivo: frontend/src/pages/Configuracion.jsx
+
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import NavBar from "../components/layout/NavBar.jsx";
 import { useAuth } from "../state/AuthContext.jsx";
 import { apiJSON } from "../services/api.js";
@@ -12,11 +14,42 @@ function getThemeLabel(theme) {
   return theme === "dark" ? "Modo oscuro" : "Modo claro";
 }
 
+function getUserName(user) {
+  return user?.nombre || user?.name || user?.email || "Administrador";
+}
+
+function boolLabel(value) {
+  return value ? "true" : "false";
+}
+
+function isFirebaseReady(status) {
+  if (!status) return false;
+
+  return (
+    status.useFirebase === true &&
+    status.firebasePreparado === true &&
+    status.conexionFirestore === "ok"
+  );
+}
+
+function getMigrationValue(resumen, key) {
+  const value = resumen?.[key];
+
+  if (Number.isFinite(Number(value))) {
+    return Number(value);
+  }
+
+  return 0;
+}
+
 export default function Configuracion() {
   const { user, token: ctxToken } = useAuth();
   const { showToast } = useToast();
   const confirm = useConfirm();
-  const token = useMemo(() => ctxToken || localStorage.getItem("token") || "", [ctxToken]);
+
+  const token = useMemo(() => {
+    return ctxToken || localStorage.getItem("token") || "";
+  }, [ctxToken]);
 
   const [health, setHealth] = useState(null);
   const [firebaseStatus, setFirebaseStatus] = useState(null);
@@ -27,10 +60,20 @@ export default function Configuracion() {
 
   useEffect(() => {
     document.body.classList.add("app-bg");
-    return () => document.body.classList.remove("app-bg");
+
+    return () => {
+      document.body.classList.remove("app-bg");
+    };
   }, []);
 
-  const loadSystemStatus = async () => {
+  const loadSystemStatus = useCallback(async () => {
+    if (!token) {
+      setHealth(null);
+      setFirebaseStatus(null);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -39,26 +82,30 @@ export default function Configuracion() {
         apiJSON("/firebase/status", { token }),
       ]);
 
-      setHealth(healthData);
-      setFirebaseStatus(firebaseData);
+      setHealth(healthData || null);
+      setFirebaseStatus(firebaseData || null);
     } catch (error) {
+      setHealth(null);
+      setFirebaseStatus(null);
+
       showToast({
         type: "error",
         title: "No se pudo verificar el sistema",
-        message: error.message || "No se pudo consultar el estado del servidor.",
+        message:
+          error.message || "No se pudo consultar el estado del servidor.",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, showToast]);
 
   useEffect(() => {
     loadSystemStatus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadSystemStatus]);
 
   const handleToggleTheme = () => {
     const next = toggleTheme();
+
     setTheme(next);
 
     showToast({
@@ -69,9 +116,20 @@ export default function Configuracion() {
   };
 
   const handleMigrateToFirebase = async () => {
+    if (!isFirebaseReady(firebaseStatus)) {
+      showToast({
+        type: "warning",
+        title: "Firebase no está listo",
+        message:
+          "Primero verifica que USE_FIREBASE esté activo y que Firestore responda correctamente.",
+      });
+      return;
+    }
+
     const ok = await confirm({
       title: "Migrar JSON a Firebase",
-      message: "Esta acción intentará copiar los datos actuales del archivo JSON local a Firestore. Solo debe ejecutarse cuando USE_FIREBASE esté en true.",
+      message:
+        "Esta acción intentará copiar los datos actuales del archivo JSON local a Firestore. Ejecútala solo si ya revisaste que Firebase está conectado.",
       confirmText: "Migrar",
       cancelText: "Cancelar",
       tone: "warning",
@@ -87,12 +145,12 @@ export default function Configuracion() {
         method: "POST",
       });
 
-      setMigrationResult(result);
+      setMigrationResult(result || null);
 
       showToast({
         type: "success",
         title: "Migración completada",
-        message: result.message || "Los datos fueron enviados a Firestore.",
+        message: result?.message || "Los datos fueron enviados a Firestore.",
       });
 
       await loadSystemStatus();
@@ -109,40 +167,51 @@ export default function Configuracion() {
     }
   };
 
+  const firebaseReady = isFirebaseReady(firebaseStatus);
+
   const systemCards = useMemo(() => {
+    const backendOk = Boolean(health);
+    const firebaseMode = firebaseStatus?.modoActual === "firebase";
+
     return [
       {
         title: "Frontend",
         value: "React + Vite",
-        description: "Interfaz web modular con rutas protegidas y componentes reutilizables.",
+        description:
+          "Interfaz web modular con rutas protegidas y componentes reutilizables.",
         status: "Activo",
         tone: "ok",
       },
       {
         title: "Backend",
-        value: health ? "Conectado" : "Sin respuesta",
-        description: health
+        value: backendOk ? "Conectado" : "Sin respuesta",
+        description: backendOk
           ? "API activa y respondiendo correctamente."
           : "No se pudo confirmar el estado del backend.",
-        status: health ? "OK" : "Revisar",
-        tone: health ? "ok" : "warn",
+        status: backendOk ? "OK" : "Revisar",
+        tone: backendOk ? "ok" : "warn",
       },
       {
         title: "Autenticación",
         value: "JWT",
-        description: "Sesiones protegidas mediante token y control de acceso por roles.",
-        status: "Seguro",
-        tone: "ok",
+        description:
+          "Sesiones protegidas mediante token y control de acceso por roles.",
+        status: token ? "Seguro" : "Sin token",
+        tone: token ? "ok" : "warn",
       },
       {
         title: "Persistencia",
-        value: firebaseStatus?.modoActual === "firebase" ? "Firestore" : "JSON local",
-        description: firebaseStatus?.mensaje || "El sistema puede trabajar con JSON local y está preparado para Firestore.",
-        status: firebaseStatus?.firebasePreparado ? "Preparado" : "Revisar",
-        tone: firebaseStatus?.firebasePreparado ? "ok" : "warn",
+        value: firebaseMode ? "Firestore" : "JSON local",
+        description:
+          firebaseStatus?.mensaje ||
+          "El sistema puede trabajar con JSON local y está preparado para Firestore.",
+        status: firebaseReady ? "Conectado" : "Revisar",
+        tone: firebaseReady ? "ok" : "warn",
       },
     ];
-  }, [health, firebaseStatus]);
+  }, [health, firebaseStatus, firebaseReady, token]);
+
+  const migrationSummary = migrationResult?.resumen || null;
 
   return (
     <>
@@ -152,12 +221,19 @@ export default function Configuracion() {
         <section className="card row-between">
           <div>
             <h1>Configuración del sistema</h1>
+
             <p className="msg">
-              {user?.name || "Administrador"} · Estado técnico, reglas académicas y preparación para Firebase.
+              {getUserName(user)} · Estado técnico, reglas académicas y
+              preparación para Firebase.
             </p>
           </div>
 
-          <button type="button" className="btn-ghost" onClick={loadSystemStatus}>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={loadSystemStatus}
+            disabled={loading || migrating}
+          >
             {loading ? "Verificando..." : "Verificar estado"}
           </button>
         </section>
@@ -169,8 +245,11 @@ export default function Configuracion() {
             {systemCards.map((card) => (
               <div className="kpi" key={card.title}>
                 <div className="kpiTitle">{card.title}</div>
+
                 <div className="kpiValue">{card.value}</div>
+
                 <p className="msg">{card.description}</p>
+
                 <span className={`badge ${card.tone}`}>{card.status}</span>
               </div>
             ))}
@@ -184,13 +263,19 @@ export default function Configuracion() {
             <div className="item">
               <div>
                 <strong>Modo actual</strong>
+
                 <p className="muted">
                   {firebaseStatus?.modoActual === "firebase"
                     ? "El backend está configurado para usar Firestore."
                     : "El backend sigue usando JSON local para mantener estable la demo."}
                 </p>
               </div>
-              <span className={`badge ${firebaseStatus?.modoActual === "firebase" ? "ok" : "warn"}`}>
+
+              <span
+                className={`badge ${
+                  firebaseStatus?.modoActual === "firebase" ? "ok" : "warn"
+                }`}
+              >
                 {firebaseStatus?.modoActual || "sin datos"}
               </span>
             </div>
@@ -198,23 +283,36 @@ export default function Configuracion() {
             <div className="item">
               <div>
                 <strong>USE_FIREBASE</strong>
+
                 <p className="muted">
                   Controla si el backend debe usar Firestore o JSON local.
                 </p>
               </div>
-              <span className={`badge ${firebaseStatus?.useFirebase ? "ok" : "warn"}`}>
-                {String(firebaseStatus?.useFirebase ?? false)}
+
+              <span
+                className={`badge ${
+                  firebaseStatus?.useFirebase ? "ok" : "warn"
+                }`}
+              >
+                {boolLabel(firebaseStatus?.useFirebase)}
               </span>
             </div>
 
             <div className="item">
               <div>
                 <strong>Modo de credenciales</strong>
+
                 <p className="muted">
-                  Indica si Firebase usa archivo de cuenta de servicio o variables separadas en .env.
+                  Indica si Firebase usa archivo de cuenta de servicio o
+                  variables separadas en .env.
                 </p>
               </div>
-              <span className={`badge ${firebaseStatus?.credencialesModo ? "ok" : "warn"}`}>
+
+              <span
+                className={`badge ${
+                  firebaseStatus?.credencialesModo ? "ok" : "warn"
+                }`}
+              >
                 {firebaseStatus?.credencialesModo || "sin datos"}
               </span>
             </div>
@@ -222,41 +320,64 @@ export default function Configuracion() {
             <div className="item">
               <div>
                 <strong>Service Account Path</strong>
+
                 <p className="muted">
-                  Indica si FIREBASE_SERVICE_ACCOUNT_PATH está configurado en el archivo .env.
+                  Indica si FIREBASE_SERVICE_ACCOUNT_PATH está configurado en el
+                  archivo .env.
                 </p>
               </div>
-              <span className={`badge ${firebaseStatus?.serviceAccountPathConfigurado ? "ok" : "warn"}`}>
-                {firebaseStatus?.serviceAccountPathConfigurado ? "Configurado" : "Pendiente"}
+
+              <span
+                className={`badge ${
+                  firebaseStatus?.serviceAccountPathConfigurado ? "ok" : "warn"
+                }`}
+              >
+                {firebaseStatus?.serviceAccountPathConfigurado
+                  ? "Configurado"
+                  : "Pendiente"}
               </span>
             </div>
 
             <div className="item">
               <div>
                 <strong>Archivo Service Account</strong>
+
                 <p className="muted">
-                  Verifica si el archivo firebase-service-account.json existe en el backend sin mostrar sus credenciales.
+                  Verifica si el archivo firebase-service-account.json existe en
+                  el backend sin mostrar sus credenciales.
                 </p>
               </div>
-              <span className={`badge ${firebaseStatus?.serviceAccountExiste ? "ok" : "warn"}`}>
-                {firebaseStatus?.serviceAccountExiste ? "Encontrado" : "No encontrado"}
+
+              <span
+                className={`badge ${
+                  firebaseStatus?.serviceAccountExiste ? "ok" : "warn"
+                }`}
+              >
+                {firebaseStatus?.serviceAccountExiste
+                  ? "Encontrado"
+                  : "No encontrado"}
               </span>
             </div>
 
             <div className="item">
               <div>
                 <strong>Variables alternativas</strong>
+
                 <p className="muted">
-                  Project ID, Client Email y Private Key solo se requieren si no usas archivo de service account.
+                  Project ID, Client Email y Private Key solo se requieren si no
+                  usas archivo de service account.
                 </p>
               </div>
-              <span className={`badge ${
-                firebaseStatus?.projectIdConfigurado &&
-                firebaseStatus?.clientEmailConfigurado &&
-                firebaseStatus?.privateKeyConfigurada
-                  ? "ok"
-                  : "warn"
-              }`}>
+
+              <span
+                className={`badge ${
+                  firebaseStatus?.projectIdConfigurado &&
+                  firebaseStatus?.clientEmailConfigurado &&
+                  firebaseStatus?.privateKeyConfigurada
+                    ? "ok"
+                    : "warn"
+                }`}
+              >
                 {firebaseStatus?.projectIdConfigurado &&
                 firebaseStatus?.clientEmailConfigurado &&
                 firebaseStatus?.privateKeyConfigurada
@@ -268,11 +389,17 @@ export default function Configuracion() {
             <div className="item">
               <div>
                 <strong>Conexión Firestore</strong>
+
                 <p className="muted">
                   Solo se prueba cuando USE_FIREBASE está en true.
                 </p>
               </div>
-              <span className={`badge ${firebaseStatus?.conexionFirestore === "ok" ? "ok" : "warn"}`}>
+
+              <span
+                className={`badge ${
+                  firebaseStatus?.conexionFirestore === "ok" ? "ok" : "warn"
+                }`}
+              >
                 {firebaseStatus?.conexionFirestore || "No activa"}
               </span>
             </div>
@@ -286,47 +413,74 @@ export default function Configuracion() {
             <div className="item">
               <div>
                 <strong>Migrar JSON local a Firestore</strong>
+
                 <p className="muted">
-                  Copia usuarios, materias, calificaciones, asignaciones, actividad, tareas y notificaciones al proyecto Firebase configurado.
+                  Copia usuarios, materias, calificaciones, asignaciones,
+                  actividad, tareas, notificaciones, recursos y calendario al
+                  proyecto Firebase configurado.
                 </p>
+
                 <p className="muted">
-                  Estado actual: {firebaseStatus?.useFirebase ? "Firebase activado" : "Firebase no activado todavía"}.
+                  Estado actual:{" "}
+                  {firebaseReady
+                    ? "Firebase conectado y listo"
+                    : "Firebase todavía no está listo para migrar"}.
                 </p>
               </div>
 
               <button
                 type="button"
-                className={firebaseStatus?.useFirebase ? "" : "btn-ghost"}
+                className={firebaseReady ? "" : "btn-ghost"}
                 onClick={handleMigrateToFirebase}
-                disabled={migrating}
+                disabled={migrating || loading || !firebaseReady}
               >
                 {migrating ? "Migrando..." : "Migrar JSON a Firebase"}
               </button>
             </div>
 
-            {!firebaseStatus?.useFirebase && (
+            {!firebaseReady && (
               <div className="item">
                 <div>
                   <strong>Migración bloqueada por seguridad</strong>
+
                   <p className="muted">
-                    Para ejecutar la migración real, configura USE_FIREBASE=true y agrega las credenciales de Firebase en el archivo .env del backend.
+                    Para ejecutar la migración real, verifica que USE_FIREBASE
+                    esté en true, que las credenciales existan y que la conexión
+                    Firestore responda con ok.
                   </p>
                 </div>
-                <span className="badge warn">USE_FIREBASE=false</span>
+
+                <span className="badge warn">Requiere revisión</span>
               </div>
             )}
 
-            {migrationResult?.resumen && (
+            {migrationSummary && (
               <div className="item">
                 <div>
                   <strong>Última migración</strong>
+
                   <p className="muted">
-                    Usuarios: {migrationResult.resumen.users} · Materias: {migrationResult.resumen.materias} · Calificaciones: {migrationResult.resumen.calificaciones}
+                    Usuarios: {getMigrationValue(migrationSummary, "users")} ·
+                    Materias: {getMigrationValue(migrationSummary, "materias")} ·
+                    Calificaciones:{" "}
+                    {getMigrationValue(migrationSummary, "calificaciones")}
                   </p>
+
                   <p className="muted">
-                    Tareas: {migrationResult.resumen.tareas} · Notificaciones: {migrationResult.resumen.notificaciones} · Actividad: {migrationResult.resumen.actividad}
+                    Tareas: {getMigrationValue(migrationSummary, "tareas")} ·
+                    Notificaciones:{" "}
+                    {getMigrationValue(migrationSummary, "notificaciones")} ·
+                    Actividad:{" "}
+                    {getMigrationValue(migrationSummary, "actividad")}
+                  </p>
+
+                  <p className="muted">
+                    Recursos: {getMigrationValue(migrationSummary, "recursos")} ·
+                    Calendario:{" "}
+                    {getMigrationValue(migrationSummary, "calendario")}
                   </p>
                 </div>
+
                 <span className="badge ok">Completada</span>
               </div>
             )}
@@ -340,28 +494,38 @@ export default function Configuracion() {
             <div className="item">
               <div>
                 <strong>Nombre del sistema</strong>
-                <p className="muted">Punto y Coma — Plataforma de seguimiento académico.</p>
+
+                <p className="muted">
+                  Punto y Coma — Plataforma de seguimiento académico.
+                </p>
               </div>
+
               <span className="badge ok">v1.0</span>
             </div>
 
             <div className="item">
               <div>
                 <strong>Objetivo</strong>
+
                 <p className="muted">
-                  Gestionar calificaciones, detectar riesgo académico y generar planes de mejora.
+                  Gestionar calificaciones, detectar riesgo académico y generar
+                  planes de mejora.
                 </p>
               </div>
+
               <span className="badge">Académico</span>
             </div>
 
             <div className="item">
               <div>
                 <strong>Arquitectura</strong>
+
                 <p className="muted">
-                  Cliente React, servidor Node.js, API REST, autenticación JWT y almacenamiento modular.
+                  Cliente React, servidor Node.js, API REST, autenticación JWT y
+                  almacenamiento modular.
                 </p>
               </div>
+
               <span className="badge ok">Cliente-servidor</span>
             </div>
           </div>
@@ -373,8 +537,10 @@ export default function Configuracion() {
           <div className="item">
             <div>
               <strong>{getThemeLabel(theme)}</strong>
+
               <p className="muted">
-                Cambia entre modo claro y oscuro para adaptar la interfaz a la presentación o uso diario.
+                Cambia entre modo claro y oscuro para adaptar la interfaz a la
+                presentación o uso diario.
               </p>
             </div>
 
@@ -391,24 +557,39 @@ export default function Configuracion() {
             <div className="item">
               <div>
                 <strong>Alumno</strong>
-                <p className="muted">Consulta calificaciones, promedio, riesgo académico, tareas y notificaciones.</p>
+
+                <p className="muted">
+                  Consulta calificaciones, promedio, riesgo académico, tareas y
+                  notificaciones.
+                </p>
               </div>
+
               <span className="badge ok">Lectura</span>
             </div>
 
             <div className="item">
               <div>
                 <strong>Maestro</strong>
-                <p className="muted">Captura calificaciones, crea tareas y da seguimiento a alumnos.</p>
+
+                <p className="muted">
+                  Captura calificaciones, crea tareas y da seguimiento a
+                  alumnos.
+                </p>
               </div>
+
               <span className="badge warn">Gestión</span>
             </div>
 
             <div className="item">
               <div>
                 <strong>Administrador</strong>
-                <p className="muted">Gestiona materias, maestros, asignaciones, actividad y configuración general.</p>
+
+                <p className="muted">
+                  Gestiona materias, maestros, asignaciones, actividad y
+                  configuración general.
+                </p>
               </div>
+
               <span className="badge bad">Control total</span>
             </div>
           </div>
@@ -421,32 +602,48 @@ export default function Configuracion() {
             <div className="item">
               <div>
                 <strong>Calificación válida</strong>
-                <p className="muted">El sistema acepta valores numéricos desde 0 hasta 10.</p>
+
+                <p className="muted">
+                  El sistema acepta valores numéricos desde 0 hasta 10.
+                </p>
               </div>
+
               <span className="badge">0 - 10</span>
             </div>
 
             <div className="item">
               <div>
                 <strong>Riesgo alto</strong>
-                <p className="muted">Promedio menor a 6 o materias críticas con bajo rendimiento.</p>
+
+                <p className="muted">
+                  Promedio menor a 6 o materias críticas con bajo rendimiento.
+                </p>
               </div>
+
               <span className="badge bad">Menor a 6</span>
             </div>
 
             <div className="item">
               <div>
                 <strong>En observación</strong>
-                <p className="muted">Promedios entre 6 y 7.99 requieren seguimiento constante.</p>
+
+                <p className="muted">
+                  Promedios entre 6 y 7.99 requieren seguimiento constante.
+                </p>
               </div>
+
               <span className="badge warn">6 - 7.99</span>
             </div>
 
             <div className="item">
               <div>
                 <strong>Rendimiento estable</strong>
-                <p className="muted">Promedios iguales o superiores a 8 se consideran favorables.</p>
+
+                <p className="muted">
+                  Promedios iguales o superiores a 8 se consideran favorables.
+                </p>
               </div>
+
               <span className="badge ok">8 - 10</span>
             </div>
           </div>
@@ -459,30 +656,39 @@ export default function Configuracion() {
             <div className="item">
               <div>
                 <strong>Fase 1 · Configuración</strong>
+
                 <p className="muted">
-                  Firebase Admin SDK instalado, configuración separada y variables de entorno preparadas.
+                  Firebase Admin SDK instalado, configuración separada y
+                  variables de entorno preparadas.
                 </p>
               </div>
+
               <span className="badge ok">Lista</span>
             </div>
 
             <div className="item">
               <div>
                 <strong>Fase 2 · Firestore</strong>
+
                 <p className="muted">
-                  Servicio firestoreStore.js creado para migrar colecciones de forma gradual.
+                  Servicio firestoreStore.js creado para migrar colecciones de
+                  forma gradual.
                 </p>
               </div>
+
               <span className="badge warn">Preparada</span>
             </div>
 
             <div className="item">
               <div>
                 <strong>Fase 3 · Migración</strong>
+
                 <p className="muted">
-                  El cambio real a Firestore debe hacerse por módulos para no romper rutas actuales.
+                  El cambio real a Firestore debe hacerse por módulos para no
+                  romper rutas actuales.
                 </p>
               </div>
+
               <span className="badge">Siguiente</span>
             </div>
           </div>

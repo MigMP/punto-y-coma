@@ -1,4 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+// Archivo: frontend/src/pages/AlumnoDetalle.jsx
+
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import NavBar from "../components/layout/NavBar.jsx";
 import { useAuth } from "../state/AuthContext.jsx";
@@ -7,29 +9,72 @@ import { useToast } from "../components/feedback/ToastProvider.jsx";
 import "../styles/dashboard.css";
 import "../styles/coach.css";
 
+function toArray(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.results)) return data.results;
+
+  return [];
+}
+
 function decodeEmail(value) {
   try {
-    return decodeURIComponent(value || "").toLowerCase();
+    return decodeURIComponent(value || "").trim().toLowerCase();
   } catch {
-    return String(value || "").toLowerCase();
+    return String(value || "").trim().toLowerCase();
   }
 }
 
 function fmt(value) {
+  if (value === null || value === undefined || value === "") {
+    return "—";
+  }
+
   const n = Number(value);
   return Number.isFinite(n) ? n.toFixed(2) : "—";
 }
 
 function gradeClass(value) {
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+
   const n = Number(value);
+
   if (!Number.isFinite(n)) return "";
   if (n < 6) return "bad";
   if (n < 8) return "warn";
+
   return "ok";
+}
+
+function formatDate(value) {
+  if (!value) return "Sin fecha";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Sin fecha";
+  }
+
+  return new Intl.DateTimeFormat("es-MX", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function getUserName(user) {
+  return user?.nombre || user?.name || user?.email || "Usuario";
+}
+
+function getStudentName(alumno, fallback = "Alumno") {
+  return alumno?.nombre || alumno?.name || alumno?.email || fallback;
 }
 
 function getStatus(value) {
   const n = Number(value);
+
   if (!Number.isFinite(n)) {
     return {
       className: "",
@@ -37,24 +82,30 @@ function getStatus(value) {
       message: "Este alumno aún no tiene calificaciones registradas.",
     };
   }
+
   if (n < 6) {
     return {
       className: "bad",
       label: "Riesgo alto",
-      message: "Requiere intervención académica inmediata y seguimiento semanal.",
+      message:
+        "Requiere intervención académica inmediata y seguimiento semanal.",
     };
   }
+
   if (n < 8) {
     return {
       className: "warn",
       label: "En observación",
-      message: "Tiene avance aceptable, pero debe reforzar materias específicas.",
+      message:
+        "Tiene avance aceptable, pero debe reforzar materias específicas.",
     };
   }
+
   return {
     className: "ok",
     label: "Estable",
-    message: "Mantiene un desempeño favorable. La prioridad es conservar constancia.",
+    message:
+      "Mantiene un desempeño favorable. La prioridad es conservar constancia.",
   };
 }
 
@@ -62,12 +113,15 @@ function buildAdvice(stats) {
   if (!stats.registros) {
     return "Primero se necesitan calificaciones registradas para generar recomendaciones.";
   }
+
   if (stats.promedio < 6) {
     return "Recomendación: revisar materias críticas, programar asesoría y priorizar actividades de recuperación.";
   }
+
   if (stats.promedio < 8) {
     return "Recomendación: reforzar las materias con promedio más bajo y revisar avances cada semana.";
   }
+
   return "Recomendación: mantener el ritmo actual y usar ejercicios de mayor dificultad para consolidar conocimientos.";
 }
 
@@ -85,6 +139,7 @@ function downloadCSV(filename, rows) {
   const blob = new Blob(["\ufeff" + toCSV(rows)], {
     type: "text/csv;charset=utf-8;",
   });
+
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
 
@@ -99,9 +154,13 @@ function downloadCSV(filename, rows) {
 export default function AlumnoDetalle() {
   const { email } = useParams();
   const alumnoEmail = decodeEmail(email);
+
   const { user, token: ctxToken } = useAuth();
   const { showToast } = useToast();
-  const token = useMemo(() => ctxToken || localStorage.getItem("token") || "", [ctxToken]);
+
+  const token = useMemo(() => {
+    return ctxToken || localStorage.getItem("token") || "";
+  }, [ctxToken]);
 
   const [alumnos, setAlumnos] = useState([]);
   const [calificaciones, setCalificaciones] = useState([]);
@@ -110,21 +169,34 @@ export default function AlumnoDetalle() {
 
   useEffect(() => {
     document.body.classList.add("app-bg");
-    return () => document.body.classList.remove("app-bg");
+
+    return () => {
+      document.body.classList.remove("app-bg");
+    };
   }, []);
 
-  const loadDetalle = async () => {
+  const loadDetalle = useCallback(async () => {
+    if (!token) {
+      setAlumnos([]);
+      setCalificaciones([]);
+      setMaterias([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
-      const [alumnosData, calificacionesData, materiasData] = await Promise.all([
-        apiJSON("/alumnos", { token }),
-        apiJSON("/calificaciones", { token }),
-        apiJSON("/materias", { token }),
-      ]);
 
-      setAlumnos(Array.isArray(alumnosData) ? alumnosData : []);
-      setCalificaciones(Array.isArray(calificacionesData) ? calificacionesData : []);
-      setMaterias(Array.isArray(materiasData) ? materiasData : []);
+      const [alumnosData, calificacionesData, materiasData] =
+        await Promise.all([
+          apiJSON("/alumnos", { token }),
+          apiJSON("/calificaciones", { token }),
+          apiJSON("/materias", { token }),
+        ]);
+
+      setAlumnos(toArray(alumnosData));
+      setCalificaciones(toArray(calificacionesData));
+      setMaterias(toArray(materiasData));
     } catch (error) {
       showToast({
         type: "error",
@@ -134,23 +206,27 @@ export default function AlumnoDetalle() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, showToast]);
 
   useEffect(() => {
     loadDetalle();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [alumnoEmail]);
+  }, [loadDetalle, alumnoEmail]);
 
   const alumno = useMemo(() => {
-    return alumnos.find((item) => String(item.email || "").toLowerCase() === alumnoEmail);
+    return alumnos.find(
+      (item) => String(item.email || "").toLowerCase() === alumnoEmail
+    );
   }, [alumnos, alumnoEmail]);
 
   const registros = useMemo(() => {
     return calificaciones
-      .filter((item) => String(item.alumnoEmail || "").toLowerCase() === alumnoEmail)
+      .filter(
+        (item) => String(item.alumnoEmail || "").toLowerCase() === alumnoEmail
+      )
       .sort((a, b) => {
         const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
         const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+
         return dateB - dateA;
       });
   }, [calificaciones, alumnoEmail]);
@@ -182,7 +258,10 @@ export default function AlumnoDetalle() {
 
     return [...map.values()]
       .map((item) => {
-        const promedio = item.valores.reduce((acc, value) => acc + value, 0) / item.valores.length;
+        const promedio =
+          item.valores.reduce((acc, value) => acc + value, 0) /
+          item.valores.length;
+
         return {
           ...item,
           promedio,
@@ -208,19 +287,22 @@ export default function AlumnoDetalle() {
       registros: valores.length,
       materias: materiaStats.length,
       riesgo: materiaStats.filter((materia) => materia.promedio < 7).length,
-      mejor: materiaStats.length ? [...materiaStats].sort((a, b) => b.promedio - a.promedio)[0] : null,
+      mejor: materiaStats.length
+        ? [...materiaStats].sort((a, b) => b.promedio - a.promedio)[0]
+        : null,
       critica: materiaStats.length ? materiaStats[0] : null,
     };
   }, [registros, materiaStats]);
 
   const status = getStatus(stats.promedio);
   const advice = buildAdvice(stats);
+  const studentName = getStudentName(alumno, alumnoEmail);
 
   const copyExpediente = async () => {
     const lines = [
       "Expediente académico - Punto y Coma",
       "",
-      `Alumno: ${alumno?.name || alumnoEmail}`,
+      `Alumno: ${studentName}`,
       `Correo: ${alumnoEmail}`,
       `Grupo: ${alumno?.grupo || "—"}`,
       `Boleta: ${alumno?.boleta || "—"}`,
@@ -233,11 +315,14 @@ export default function AlumnoDetalle() {
       advice,
       "",
       "Materias:",
-      ...materiaStats.map((materia) => `- ${materia.materia}: ${fmt(materia.promedio)}`),
+      ...materiaStats.map(
+        (materia) => `- ${materia.materia}: ${fmt(materia.promedio)}`
+      ),
     ];
 
     try {
       await navigator.clipboard.writeText(lines.join("\n"));
+
       showToast({
         type: "success",
         title: "Expediente copiado",
@@ -253,17 +338,35 @@ export default function AlumnoDetalle() {
   };
 
   const exportCSV = () => {
+    if (!registros.length) {
+      showToast({
+        type: "info",
+        title: "Sin registros",
+        message: "No hay calificaciones para exportar.",
+      });
+      return;
+    }
+
     const rows = [
-      ["Alumno", "Correo", "Grupo", "Boleta", "Materia", "Calificación", "Fecha creación", "Última actualización"],
+      [
+        "Alumno",
+        "Correo",
+        "Grupo",
+        "Boleta",
+        "Materia",
+        "Calificación",
+        "Fecha creación",
+        "Última actualización",
+      ],
       ...registros.map((registro) => [
-        alumno?.name || registro.alumnoNombre || alumnoEmail,
+        studentName || registro.alumnoNombre || alumnoEmail,
         alumnoEmail,
         alumno?.grupo || "",
         alumno?.boleta || "",
         registro.materiaNombre || registro.materiaId || "",
         fmt(registro.calificacion),
-        registro.createdAt || "",
-        registro.updatedAt || "",
+        formatDate(registro.createdAt),
+        formatDate(registro.updatedAt),
       ]),
     ];
 
@@ -279,12 +382,14 @@ export default function AlumnoDetalle() {
   return (
     <>
       <NavBar />
+
       <main className="container">
         <section className="card row-between">
           <div>
             <h1>Expediente académico</h1>
+
             <p className="msg">
-              {alumno?.name || alumnoEmail} · Seguimiento individual del alumno.
+              {studentName} · Seguimiento individual del alumno.
             </p>
           </div>
 
@@ -293,7 +398,12 @@ export default function AlumnoDetalle() {
               Volver
             </Link>
 
-            <button type="button" className="btn-ghost" onClick={loadDetalle}>
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={loadDetalle}
+              disabled={loading}
+            >
               {loading ? "Cargando..." : "Actualizar"}
             </button>
           </div>
@@ -305,7 +415,10 @@ export default function AlumnoDetalle() {
           <div className="coachRow">
             <div className="kpi">
               <div className="kpiTitle">Promedio</div>
-              <div className="kpiValue">{loading ? "..." : fmt(stats.promedio)}</div>
+
+              <div className="kpiValue">
+                {loading ? "..." : fmt(stats.promedio)}
+              </div>
             </div>
 
             <div className="kpi">
@@ -331,7 +444,9 @@ export default function AlumnoDetalle() {
           <div className="item">
             <div>
               <strong>{status.label}</strong>
+
               <p className="muted">{status.message}</p>
+
               <p className="muted">{advice}</p>
             </div>
 
@@ -341,11 +456,21 @@ export default function AlumnoDetalle() {
           </div>
 
           <div className="row planWrap planSpacingSmall">
-            <button type="button" className="btn-ghost" onClick={copyExpediente}>
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={copyExpediente}
+              disabled={loading}
+            >
               Copiar expediente
             </button>
 
-            <button type="button" className="btn-ghost" onClick={exportCSV}>
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={exportCSV}
+              disabled={loading || !registros.length}
+            >
               Exportar CSV
             </button>
 
@@ -361,25 +486,31 @@ export default function AlumnoDetalle() {
           <div className="lista">
             <div className="item">
               <div>
-                <strong>{alumno?.name || "Alumno"}</strong>
+                <strong>{studentName}</strong>
+
                 <p className="muted">{alumnoEmail}</p>
               </div>
+
               <span className="badge ok">Alumno</span>
             </div>
 
             <div className="item">
               <div>
                 <strong>Grupo</strong>
+
                 <p className="muted">{alumno?.grupo || "No registrado"}</p>
               </div>
+
               <span className="badge">{alumno?.grupo || "—"}</span>
             </div>
 
             <div className="item">
               <div>
                 <strong>Boleta</strong>
+
                 <p className="muted">Identificador escolar del alumno.</p>
               </div>
+
               <span className="badge">{alumno?.boleta || "—"}</span>
             </div>
           </div>
@@ -393,8 +524,10 @@ export default function AlumnoDetalle() {
               <div className="item" key={materia.materiaId}>
                 <div className="textClamp">
                   <strong>{materia.materia}</strong>
+
                   <p className="muted">
-                    {materia.registros} registro(s) · mínimo {fmt(materia.min)} · máximo {fmt(materia.max)}
+                    {materia.registros} registro(s) · mínimo {fmt(materia.min)} ·
+                    máximo {fmt(materia.max)}
                   </p>
                 </div>
 
@@ -406,7 +539,9 @@ export default function AlumnoDetalle() {
 
             {!materiaStats.length && (
               <p className="msg">
-                {loading ? "Cargando materias..." : "Este alumno aún no tiene materias evaluadas."}
+                {loading
+                  ? "Cargando materias..."
+                  : "Este alumno aún no tiene materias evaluadas."}
               </p>
             )}
           </div>
@@ -420,8 +555,10 @@ export default function AlumnoDetalle() {
               <div className="item" key={registro.id}>
                 <div className="textClamp">
                   <strong>{registro.materiaNombre || "Materia"}</strong>
+
                   <p className="muted">
-                    Registrado por {registro.creadoPor || "maestro"} · {registro.updatedAt || registro.createdAt || "sin fecha"}
+                    Registrado por {registro.creadoPor || "maestro"} ·{" "}
+                    {formatDate(registro.updatedAt || registro.createdAt)}
                   </p>
                 </div>
 
@@ -433,7 +570,9 @@ export default function AlumnoDetalle() {
 
             {!registros.length && (
               <p className="msg">
-                {loading ? "Cargando historial..." : "No hay calificaciones registradas para este alumno."}
+                {loading
+                  ? "Cargando historial..."
+                  : "No hay calificaciones registradas para este alumno."}
               </p>
             )}
           </div>
@@ -446,10 +585,14 @@ export default function AlumnoDetalle() {
             <div className="item">
               <div>
                 <strong>Materia más fuerte</strong>
+
                 <p className="muted">
-                  {stats.mejor ? stats.mejor.materia : "Aún no hay datos suficientes."}
+                  {stats.mejor
+                    ? stats.mejor.materia
+                    : "Aún no hay datos suficientes."}
                 </p>
               </div>
+
               <span className={`badge ${gradeClass(stats.mejor?.promedio)}`}>
                 {stats.mejor ? fmt(stats.mejor.promedio) : "—"}
               </span>
@@ -458,10 +601,14 @@ export default function AlumnoDetalle() {
             <div className="item">
               <div>
                 <strong>Materia con prioridad</strong>
+
                 <p className="muted">
-                  {stats.critica ? stats.critica.materia : "Aún no hay datos suficientes."}
+                  {stats.critica
+                    ? stats.critica.materia
+                    : "Aún no hay datos suficientes."}
                 </p>
               </div>
+
               <span className={`badge ${gradeClass(stats.critica?.promedio)}`}>
                 {stats.critica ? fmt(stats.critica.promedio) : "—"}
               </span>

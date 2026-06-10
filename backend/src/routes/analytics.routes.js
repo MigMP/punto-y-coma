@@ -1,3 +1,5 @@
+// Archivo: backend/src/routes/analytics.routes.js
+
 const express = require("express");
 
 const { getCollection } = require("../db/firestoreStore");
@@ -13,6 +15,11 @@ function normalizeEmail(value) {
 function round(value, decimals = 2) {
   const factor = 10 ** decimals;
   return Math.round(Number(value || 0) * factor) / factor;
+}
+
+function percentage(part, total) {
+  if (!total) return 0;
+  return round((Number(part || 0) / Number(total || 0)) * 100);
 }
 
 function average(numbers) {
@@ -42,6 +49,26 @@ function getRiskLevel(promedio) {
   if (promedio < 6) return "riesgo_alto";
   if (promedio < 8) return "observacion";
   return "estable";
+}
+
+function getPerformanceLabel(promedio) {
+  if (promedio >= 9) return "excelente";
+  if (promedio >= 8) return "bueno";
+  if (promedio >= 6) return "regular";
+  return "riesgo";
+}
+
+function isValidDate(value) {
+  const time = new Date(value || "").getTime();
+  return Number.isFinite(time);
+}
+
+function sortByAverageAsc(items) {
+  return [...items].sort((a, b) => a.promedio - b.promedio);
+}
+
+function sortByAverageDesc(items) {
+  return [...items].sort((a, b) => b.promedio - a.promedio);
 }
 
 router.get("/analiticas", auth, requireRole(ROLES.ADMIN, ROLES.MAESTRO), async (req, res) => {
@@ -74,6 +101,10 @@ router.get("/analiticas", auth, requireRole(ROLES.ADMIN, ROLES.MAESTRO), async (
         .filter((asignacion) => normalizeEmail(asignacion.maestroEmail) === teacherEmail)
         .map((asignacion) => Number(asignacion.materiaId))
     );
+
+    const visibleMaterias = isTeacher
+      ? materias.filter((materia) => teacherSubjectIds.has(Number(materia.id)))
+      : materias;
 
     const visibleCalificaciones = isTeacher
       ? calificaciones.filter((item) => teacherSubjectIds.has(Number(item.materiaId)))
@@ -114,8 +145,22 @@ router.get("/analiticas", auth, requireRole(ROLES.ADMIN, ROLES.MAESTRO), async (
         promedio,
         totalCalificaciones: grades.length,
         nivel: getRiskLevel(promedio),
+        rendimiento: getPerformanceLabel(promedio),
       };
     });
+
+    const alumnosConCalificaciones = new Set(
+      visibleCalificaciones.map((item) => normalizeEmail(item.alumnoEmail))
+    );
+
+    const alumnosSinCalificaciones = alumnos
+      .filter((alumno) => !alumnosConCalificaciones.has(normalizeEmail(alumno.email)))
+      .map((alumno) => ({
+        id: alumno.id,
+        nombre: alumno.name,
+        email: alumno.email,
+        grupo: alumno.grupo || "",
+      }));
 
     const alumnosEnRiesgo = alumnosResumen.filter((item) => item.promedio < 6);
     const alumnosObservacion = alumnosResumen.filter(
@@ -123,7 +168,15 @@ router.get("/analiticas", auth, requireRole(ROLES.ADMIN, ROLES.MAESTRO), async (
     );
     const alumnosEstables = alumnosResumen.filter((item) => item.promedio >= 8);
 
-    const promedioPorMateria = materias.map((materia) => {
+    const distribucionRendimiento = {
+      excelente: alumnosResumen.filter((item) => item.promedio >= 9).length,
+      bueno: alumnosResumen.filter((item) => item.promedio >= 8 && item.promedio < 9).length,
+      regular: alumnosResumen.filter((item) => item.promedio >= 6 && item.promedio < 8).length,
+      riesgo: alumnosResumen.filter((item) => item.promedio < 6).length,
+      sinCalificaciones: alumnosSinCalificaciones.length,
+    };
+
+    const promedioPorMateria = visibleMaterias.map((materia) => {
       const grades = visibleCalificaciones.filter(
         (item) => Number(item.materiaId) === Number(materia.id)
       );
@@ -142,6 +195,18 @@ router.get("/analiticas", auth, requireRole(ROLES.ADMIN, ROLES.MAESTRO), async (
       completada: visibleTareas.filter((item) => item.status === "completada").length,
     };
 
+    const tareasPendientes = visibleTareas.filter((item) => item.status !== "completada");
+
+    const now = Date.now();
+
+    const tareasVencidas = visibleTareas.filter((item) => {
+      const dueDate = item.dueAt || item.fechaEntrega || item.deadline;
+
+      if (!dueDate || !isValidDate(dueDate)) return false;
+
+      return item.status !== "completada" && new Date(dueDate).getTime() < now;
+    });
+
     const recursosPorTipo = {
       video: visibleRecursos.filter((item) => item.type === "video").length,
       guia: visibleRecursos.filter((item) => item.type === "guia").length,
@@ -149,8 +214,6 @@ router.get("/analiticas", auth, requireRole(ROLES.ADMIN, ROLES.MAESTRO), async (
       link: visibleRecursos.filter((item) => item.type === "link").length,
       recomendacion: visibleRecursos.filter((item) => item.type === "recomendacion").length,
     };
-
-    const now = Date.now();
 
     const eventosProximos = visibleCalendario
       .filter((item) => new Date(item.startAt || 0).getTime() >= now)
@@ -170,41 +233,77 @@ router.get("/analiticas", auth, requireRole(ROLES.ADMIN, ROLES.MAESTRO), async (
 
     const notificacionesNoLeidas = notificaciones.filter((item) => !item.read).length;
 
-    const materiasCriticas = promedioPorMateria
-      .filter((item) => item.total > 0)
-      .sort((a, b) => a.promedio - b.promedio)
-      .slice(0, 5);
+    const materiasCriticas = sortByAverageAsc(
+      promedioPorMateria.filter((item) => item.total > 0)
+    ).slice(0, 5);
 
-    const mejoresMaterias = promedioPorMateria
-      .filter((item) => item.total > 0)
-      .sort((a, b) => b.promedio - a.promedio)
-      .slice(0, 5);
+    const mejoresMaterias = sortByAverageDesc(
+      promedioPorMateria.filter((item) => item.total > 0)
+    ).slice(0, 5);
+
+    const topAlumnos = sortByAverageDesc(alumnosResumen).slice(0, 5);
+    const alumnosPrioritarios = sortByAverageAsc(alumnosResumen).slice(0, 10);
+
+    const totalAlumnosEvaluados = alumnosResumen.length;
+
+    const indicadores = {
+      porcentajeAlumnosEnRiesgo: percentage(alumnosEnRiesgo.length, totalAlumnosEvaluados),
+      porcentajeAlumnosEstables: percentage(alumnosEstables.length, totalAlumnosEvaluados),
+      porcentajeTareasCompletadas: percentage(tareasPorEstado.completada, visibleTareas.length),
+      porcentajeMateriasConCalificaciones: percentage(
+        promedioPorMateria.filter((item) => item.total > 0).length,
+        visibleMaterias.length
+      ),
+    };
+
+    const resumenEjecutivo = {
+      mensaje:
+        alumnosEnRiesgo.length > 0
+          ? `Se detectaron ${alumnosEnRiesgo.length} alumno(s) en riesgo académico.`
+          : "No se detectaron alumnos en riesgo con las calificaciones actuales.",
+      prioridad:
+        alumnosEnRiesgo.length > 0 || tareasVencidas.length > 0
+          ? "alta"
+          : alumnosObservacion.length > 0
+            ? "media"
+            : "baja",
+      recomendacion:
+        alumnosEnRiesgo.length > 0
+          ? "Dar seguimiento a los alumnos con promedio menor a 6 y revisar materias críticas."
+          : "Mantener seguimiento preventivo y actualizar calificaciones periódicamente.",
+    };
 
     return res.json({
       scope: isTeacher ? "maestro" : "administrador",
       generatedAt: new Date().toISOString(),
+      resumenEjecutivo,
       resumen: {
         totalUsuarios: users.length,
         totalAlumnos: alumnos.length,
         totalMaestros: maestros.length,
         totalAdministradores: admins.length,
-        totalMaterias: materias.length,
+        totalMaterias: visibleMaterias.length,
         totalCalificaciones: visibleCalificaciones.length,
         promedioGeneral,
         alumnosEnRiesgo: alumnosEnRiesgo.length,
         alumnosObservacion: alumnosObservacion.length,
         alumnosEstables: alumnosEstables.length,
+        alumnosSinCalificaciones: alumnosSinCalificaciones.length,
         totalTareas: visibleTareas.length,
+        tareasPendientes: tareasPendientes.length,
+        tareasVencidas: tareasVencidas.length,
         totalRecursos: visibleRecursos.length,
         totalEventos: visibleCalendario.length,
         notificacionesNoLeidas,
       },
+      indicadores,
+      distribucionRendimiento,
       promedioPorMateria,
       materiasCriticas,
       mejoresMaterias,
-      alumnosResumen: alumnosResumen
-        .sort((a, b) => a.promedio - b.promedio)
-        .slice(0, 10),
+      alumnosResumen: alumnosPrioritarios,
+      topAlumnos,
+      alumnosSinCalificaciones: alumnosSinCalificaciones.slice(0, 10),
       tareasPorEstado,
       recursosPorTipo,
       eventosProximos,

@@ -1,299 +1,15 @@
-/* name=frontend/src/styles/profile.css */
+/* Archivo: frontend/src/styles/profile.css */
+
 /* =========================
-   PROFILE - PUNTO Y COMA
+   PERFIL - BASE LIMPIA
    ========================= */
-.profileHero {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  flex-wrap: wrap;
-}
-.profileHeroLeft {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  min-width: 0;
-}
-.profileAvatar {
-  width: 74px;
-  height: 74px;
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  border-radius: 24px;
-  color: #ffffff;
-  background:
-    radial-gradient(80px 80px at 80% 20%, rgba(20, 184, 166, 0.55), transparent 62%),
-    linear-gradient(135deg, var(--brand), var(--brand2));
-  box-shadow: 0 18px 42px rgba(30, 58, 138, 0.22);
-  font-size: 24px;
-  font-weight: 1000;
-  letter-spacing: -0.04em;
-}
-.profileIdentity {
-  min-width: 0;
-}
-.profileEyebrow {
-  display: inline-flex;
-  margin-bottom: 8px;
-  padding: 7px 10px;
-  border-radius: 999px;
-  color: var(--brand2);
-  background: rgba(15, 118, 110, 0.1);
-  border: 1px solid rgba(15, 118, 110, 0.16);
-  font-size: 12px;
-  font-weight: 1000;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-.profileTitle {
-  margin: 0;
-  color: var(--brand-dark);
-  font-size: clamp(30px, 4vw, 46px);
-  line-height: 1;
-  letter-spacing: -0.06em;
-  font-weight: 1000;
-}
-.profileSubtitle {
-  margin: 8px 0 0;
-  color: var(--muted);
-  line-height: 1.5;
-  font-size: 14px;
-  font-weight: 700;
-  word-break: break-word;
-}
-.profileHeroRight {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-/* =========================
-   ROLE BADGE
-   ========================= */
-.profileRole {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 38px;
-  padding: 9px 13px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 1000;
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  background: #ffffff;
-  color: var(--brand);
-}
-.profileRole.role-alumno {
-  color: #1e3a8a;
-  background: rgba(30, 58, 138, 0.08);
-  border-color: rgba(30, 58, 138, 0.16);
-}
-.profileRole.role-maestro {
-  color: #0f766e;
-  background: rgba(15, 118, 110, 0.09);
-  border-color: rgba(15, 118, 110, 0.17);
-}
-.profileRole.role-administrador {
-  color: #92400e;
-  background: rgba(245, 158, 11, 0.13);
-  border-color: rgba(245, 158, 11, 0.24);
-}
-/* =========================
-   LAYOUT
-   ========================= */
-.profileLayout {
-  display: grid;
-  grid-template-columns: 1.25fr 0.75fr;
-  gap: 18px;
-  align-items: start;
-}
-.profilePanel {
-  min-height: 100%;
-}
-.profileSectionHeader {
-  margin-bottom: 18px;
-}
-.profileSectionTag {
-  display: inline-flex;
-  margin-bottom: 10px;
-  padding: 7px 10px;
-  border-radius: 999px;
-  color: var(--brand2);
-  background: rgba(15, 118, 110, 0.1);
-  border: 1px solid rgba(15, 118, 110, 0.16);
-  font-size: 12px;
-  font-weight: 1000;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-.profileSectionHeader h2 {
-  margin-bottom: 8px;
-}
-.profileSectionHeader p {
-  margin: 0;
-  color: var(--muted);
-  line-height: 1.65;
-  font-size: 14px;
-  font-weight: 650;
-}
-/* =========================
-   DATA GRID
-   ========================= */
-.profileGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
-.profileField {
-  min-width: 0;
-  padding: 15px;
-  border-radius: 18px;
-  background:
-    linear-gradient(180deg, #ffffff, #f8fafc);
-  border: 1px solid var(--border);
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
-}
-.profileField:hover {
-  transform: translateY(-2px);
-  border-color: rgba(30, 58, 138, 0.2);
-  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.07);
-}
-.profileFieldWide {
-  grid-column: 1 / -1;
-}
-.profileLabel {
-  display: block;
-  margin-bottom: 7px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 1000;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-}
-.profileValue {
-  display: block;
-  color: #0f172a;
-  font-size: 15px;
-  line-height: 1.45;
-  font-weight: 900;
-  word-break: break-word;
-}
-/* =========================
-   PERMISSIONS
-   ========================= */
-.permissionList {
-  display: grid;
-  gap: 10px;
-}
-.permissionItem {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 13px;
-  border-radius: 16px;
-  color: #334155;
-  background: #f8fafc;
-  border: 1px solid var(--border);
-  font-size: 14px;
-  line-height: 1.45;
-  font-weight: 750;
-}
-.permissionDot {
-  width: 9px;
-  height: 9px;
-  margin-top: 6px;
-  flex: 0 0 auto;
-  border-radius: 999px;
-  background: var(--brand2);
-  box-shadow: 0 0 0 5px rgba(15, 118, 110, 0.1);
-}
-/* =========================
-   DARK MODE
-   ========================= */
-html.dark .profileTitle,
-html.dark .profileValue {
-  color: #f8fafc;
-}
-html.dark .profileSubtitle,
-html.dark .profileSectionHeader p,
-html.dark .profileLabel {
-  color: #94a3b8;
-}
-html.dark .profileEyebrow,
-html.dark .profileSectionTag {
-  color: #5eead4;
-  background: rgba(20, 184, 166, 0.1);
-  border-color: rgba(20, 184, 166, 0.18);
-}
-html.dark .profileField,
-html.dark .permissionItem,
-html.dark .profileRole {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: var(--border);
-}
-html.dark .profileField:hover {
-  border-color: rgba(96, 165, 250, 0.28);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.24);
-}
-html.dark .permissionItem {
-  color: #cbd5e1;
-}
-html.dark .profileRole.role-alumno {
-  color: #bfdbfe;
-  background: rgba(59, 130, 246, 0.12);
-  border-color: rgba(96, 165, 250, 0.2);
-}
-html.dark .profileRole.role-maestro {
-  color: #5eead4;
-  background: rgba(20, 184, 166, 0.1);
-  border-color: rgba(20, 184, 166, 0.18);
-}
-html.dark .profileRole.role-administrador {
-  color: #fcd34d;
-  background: rgba(245, 158, 11, 0.11);
-  border-color: rgba(245, 158, 11, 0.2);
-}
-/* =========================
-   RESPONSIVE
-   ========================= */
-@media (max-width: 900px) {
-  .profileLayout {
-    grid-template-columns: 1fr;
-  }
-  .profileHero {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-  .profileHeroRight {
-    width: 100%;
-  }
-}
-@media (max-width: 640px) {
-  .profileHeroLeft {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-  .profileAvatar {
-    width: 64px;
-    height: 64px;
-    border-radius: 20px;
-    font-size: 21px;
-  }
-  .profileGrid {
-    grid-template-columns: 1fr;
-  }
-  .profileHeroRight .btn-del,
-  .profileRole {
-    width: 100%;
-  }
-}
+
 .profileCleanHero {
-  display: flex;
+  display: grid;
+  grid-template-columns: 160px 1fr;
   align-items: center;
   gap: 28px;
-  padding: 34px;
+  padding: 30px;
 }
 
 .profilePhotoBlock {
@@ -305,61 +21,410 @@ html.dark .profileRole.role-administrador {
 }
 
 .profilePhotoButton {
-  width: 132px;
-  height: 132px;
-  border: 0;
-  border-radius: 34px;
-  overflow: hidden;
-  cursor: pointer;
-  background: linear-gradient(135deg, #1d4ed8, #0f766e);
-  color: #fff;
+  width: 124px;
+  height: 124px;
   display: grid;
   place-items: center;
-  font-size: 2.4rem;
-  font-weight: 900;
-  box-shadow: 0 22px 45px rgba(0, 0, 0, 0.22);
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  overflow: hidden;
+  cursor: pointer;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--brand), var(--brand2));
+  box-shadow: var(--shadow-soft);
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    filter 0.16s ease;
+}
+
+.profilePhotoButton:hover {
+  transform: translateY(-1px);
+  border-color: rgba(30, 58, 138, 0.22);
+  filter: brightness(1.03);
 }
 
 .profilePhotoButton img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.profilePhotoButton:hover {
-  transform: translateY(-1px);
-  filter: brightness(1.08);
+.profilePhotoButton span {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--brand), var(--brand2));
+  font-size: 2.3rem;
+  font-weight: 850;
+  letter-spacing: -0.04em;
 }
 
 .profilePhotoActions {
   display: flex;
+  justify-content: center;
   gap: 8px;
   flex-wrap: wrap;
-  justify-content: center;
 }
+
+.profilePhotoActions .btn-ghost,
+.profilePhotoActions .btn-del {
+  min-height: 38px;
+  padding: 8px 13px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 760;
+}
+
+/* =========================
+   INFO PRINCIPAL
+   ========================= */
 
 .profileCleanInfo {
   min-width: 0;
-  flex: 1;
+}
+
+.profileEyebrow,
+.profileSectionTag {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-bottom: 10px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: var(--brand2);
+  background: rgba(15, 118, 110, 0.08);
+  border: 1px solid rgba(15, 118, 110, 0.16);
+  font-size: 11.5px;
+  font-weight: 780;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .profileCleanInfo h1 {
-  margin: 10px 0 4px;
-  font-size: clamp(2.2rem, 5vw, 4.4rem);
-  line-height: 0.95;
+  margin: 6px 0 8px;
+  color: var(--text);
+  font-size: clamp(2rem, 4vw, 3.6rem);
+  line-height: 1;
+  letter-spacing: -0.055em;
+  font-weight: 880;
+  max-width: 850px;
+}
+
+.profileCleanInfo .msg {
+  margin: 0 0 12px;
 }
 
 .profileDescription {
+  max-width: 700px;
+  margin: 0;
   color: var(--muted);
-  max-width: 760px;
-  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.55;
+  font-weight: 520;
 }
+
+/* =========================
+   ACCIONES DEL PERFIL
+   ========================= */
 
 .profileCleanActions {
   display: flex;
+  align-items: center;
   gap: 10px;
   flex-wrap: wrap;
   margin-top: 18px;
+}
+
+.profileAction {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 760;
+  color: var(--brand);
+  background: rgba(30, 58, 138, 0.055);
+  border: 1px solid rgba(30, 58, 138, 0.16);
+  box-shadow: none;
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    transform 0.16s ease;
+}
+
+.profileAction:hover {
+  transform: translateY(-1px);
+  background: rgba(30, 58, 138, 0.09);
+  border-color: rgba(30, 58, 138, 0.24);
+}
+
+.profileAction.primary {
+  color: #166534;
+  background: rgba(22, 163, 74, 0.09);
+  border-color: rgba(22, 163, 74, 0.22);
+}
+
+.profileAction.primary:hover {
+  background: rgba(22, 163, 74, 0.13);
+}
+
+.profileAction.danger {
+  color: #991b1b;
+  background: rgba(220, 38, 38, 0.075);
+  border-color: rgba(220, 38, 38, 0.2);
+}
+
+.profileAction.danger:hover {
+  background: rgba(220, 38, 38, 0.11);
+}
+
+/* =========================
+   GRID MINIMALISTA
+   ========================= */
+
+.profileMinimalGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.profilePanel {
+  min-height: 100%;
+  padding: 24px;
+}
+
+.profileSectionHeader {
+  margin-bottom: 16px;
+}
+
+.profileSectionHeader h2 {
+  margin-bottom: 8px;
+}
+
+.profileSectionHeader p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+  font-size: 14px;
+  font-weight: 520;
+}
+
+/* =========================
+   LISTA DE DATOS
+   ========================= */
+
+.profileSimpleList {
+  display: grid;
+  gap: 10px;
+}
+
+.profileSimpleList div {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 15px;
+  background: var(--card-soft);
+  border: 1px solid var(--border);
+}
+
+.profileSimpleList span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 760;
+  text-transform: uppercase;
+  letter-spacing: 0.055em;
+}
+
+.profileSimpleList strong {
+  color: var(--text);
+  text-align: right;
+  word-break: break-word;
+  font-weight: 760;
+}
+
+/* =========================
+   PERMISOS
+   ========================= */
+
+.permissionList {
+  display: grid;
+  gap: 10px;
+}
+
+.permissionItem {
+  min-height: 52px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 13px;
+  border-radius: 15px;
+  color: var(--text);
+  background: var(--card-soft);
+  border: 1px solid var(--border);
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: 560;
+}
+
+.permissionDot {
+  width: 9px;
+  height: 9px;
+  margin-top: 6px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--brand2);
+}
+
+/* =========================
+   CLASES ANTIGUAS SOPORTADAS
+   ========================= */
+
+.profileHero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.profileHeroLeft {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.profileAvatar {
+  width: 74px;
+  height: 74px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 22px;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--brand), var(--brand2));
+  box-shadow: var(--shadow-soft);
+  font-size: 24px;
+  font-weight: 850;
+  letter-spacing: -0.04em;
+}
+
+.profileIdentity {
+  min-width: 0;
+}
+
+.profileTitle {
+  margin: 0;
+  color: var(--text);
+  font-size: clamp(30px, 4vw, 46px);
+  line-height: 1;
+  letter-spacing: -0.055em;
+  font-weight: 880;
+}
+
+.profileSubtitle {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+  font-size: 14px;
+  font-weight: 520;
+  word-break: break-word;
+}
+
+.profileHeroRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.profileRole {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 760;
+  border: 1px solid var(--border);
+  background: var(--card-soft);
+  color: var(--brand);
+}
+
+.profileRole.role-alumno {
+  color: #1e3a8a;
+  background: rgba(30, 58, 138, 0.07);
+  border-color: rgba(30, 58, 138, 0.16);
+}
+
+.profileRole.role-maestro {
+  color: #0f766e;
+  background: rgba(15, 118, 110, 0.08);
+  border-color: rgba(15, 118, 110, 0.17);
+}
+
+.profileRole.role-administrador {
+  color: #92400e;
+  background: rgba(245, 158, 11, 0.11);
+  border-color: rgba(245, 158, 11, 0.24);
+}
+
+.profileLayout {
+  display: grid;
+  grid-template-columns: 1.25fr 0.75fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.profileGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.profileField {
+  min-width: 0;
+  padding: 14px;
+  border-radius: 15px;
+  background: var(--card-soft);
+  border: 1px solid var(--border);
+}
+
+.profileFieldWide {
+  grid-column: 1 / -1;
+}
+
+.profileLabel {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 760;
+  text-transform: uppercase;
+  letter-spacing: 0.055em;
+}
+
+.profileValue {
+  display: block;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.45;
+  font-weight: 760;
+  word-break: break-word;
 }
 
 .profileBadgeButton {
@@ -368,53 +433,135 @@ html.dark .profileRole.role-administrador {
   font: inherit;
 }
 
-.profileMinimalGrid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
-  gap: 22px;
+/* =========================
+   DARK MODE
+   ========================= */
+
+html.dark .profileCleanInfo h1,
+html.dark .profileTitle,
+html.dark .profileValue,
+html.dark .profileSimpleList strong,
+html[data-theme="dark"] .profileCleanInfo h1,
+html[data-theme="dark"] .profileTitle,
+html[data-theme="dark"] .profileValue,
+html[data-theme="dark"] .profileSimpleList strong {
+  color: var(--text);
 }
 
-.profileSimpleList {
-  display: grid;
-  gap: 12px;
-}
-
-.profileSimpleList div {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px 18px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.045);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.profileSimpleList span {
+html.dark .profileDescription,
+html.dark .profileSubtitle,
+html.dark .profileSectionHeader p,
+html.dark .profileLabel,
+html.dark .profileSimpleList span,
+html[data-theme="dark"] .profileDescription,
+html[data-theme="dark"] .profileSubtitle,
+html[data-theme="dark"] .profileSectionHeader p,
+html[data-theme="dark"] .profileLabel,
+html[data-theme="dark"] .profileSimpleList span {
   color: var(--muted);
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.78rem;
 }
 
-.profileSimpleList strong {
-  text-align: right;
-  word-break: break-word;
+html.dark .profileEyebrow,
+html.dark .profileSectionTag,
+html[data-theme="dark"] .profileEyebrow,
+html[data-theme="dark"] .profileSectionTag {
+  color: #5eead4;
+  background: rgba(20, 184, 166, 0.08);
+  border-color: rgba(20, 184, 166, 0.18);
 }
+
+html.dark .profilePhotoButton,
+html[data-theme="dark"] .profilePhotoButton {
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+html.dark .profileSimpleList div,
+html.dark .permissionItem,
+html.dark .profileRole,
+html.dark .profileField,
+html[data-theme="dark"] .profileSimpleList div,
+html[data-theme="dark"] .permissionItem,
+html[data-theme="dark"] .profileRole,
+html[data-theme="dark"] .profileField {
+  background: var(--card-soft);
+  border-color: var(--border);
+}
+
+html.dark .permissionItem,
+html[data-theme="dark"] .permissionItem {
+  color: var(--text);
+}
+
+html.dark .profileAction,
+html[data-theme="dark"] .profileAction {
+  color: #bfdbfe;
+  background: rgba(147, 197, 253, 0.075);
+  border-color: rgba(147, 197, 253, 0.18);
+}
+
+html.dark .profileAction.primary,
+html[data-theme="dark"] .profileAction.primary {
+  color: #bbf7d0;
+  background: rgba(34, 197, 94, 0.11);
+  border-color: rgba(34, 197, 94, 0.22);
+}
+
+html.dark .profileAction.danger,
+html[data-theme="dark"] .profileAction.danger {
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.22);
+}
+
+html.dark .profileRole.role-alumno,
+html[data-theme="dark"] .profileRole.role-alumno {
+  color: #bfdbfe;
+  background: rgba(59, 130, 246, 0.11);
+  border-color: rgba(96, 165, 250, 0.2);
+}
+
+html.dark .profileRole.role-maestro,
+html[data-theme="dark"] .profileRole.role-maestro {
+  color: #5eead4;
+  background: rgba(20, 184, 166, 0.09);
+  border-color: rgba(20, 184, 166, 0.18);
+}
+
+html.dark .profileRole.role-administrador,
+html[data-theme="dark"] .profileRole.role-administrador {
+  color: #fcd34d;
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+/* =========================
+   RESPONSIVE
+   ========================= */
 
 @media (max-width: 900px) {
   .profileCleanHero {
+    grid-template-columns: 1fr;
     align-items: flex-start;
-    flex-direction: column;
+    padding: 24px;
   }
 
   .profilePhotoBlock {
     align-items: flex-start;
   }
 
-  .profileMinimalGrid {
+  .profileMinimalGrid,
+  .profileLayout {
     grid-template-columns: 1fr;
+  }
+
+  .profileHero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .profileHeroRight {
+    width: 100%;
   }
 
   .profileSimpleList div {
@@ -426,156 +573,14 @@ html.dark .profileRole.role-administrador {
     text-align: left;
   }
 }
-/* PERFIL MINIMALISTA - OVERRIDES */
-
-.profileCleanHero {
-  display: grid;
-  grid-template-columns: 170px 1fr;
-  align-items: center;
-  gap: 28px;
-  padding: 32px;
-  min-height: auto;
-}
-
-.profilePhotoBlock {
-  align-items: center;
-}
-
-.profilePhotoButton {
-  width: 118px;
-  height: 118px;
-  border-radius: 28px;
-  box-shadow: none;
-}
-
-.profilePhotoButton:hover {
-  transform: none;
-  filter: brightness(1.05);
-}
-
-.profilePhotoActions {
-  gap: 8px;
-}
-
-.profilePhotoActions .btn-ghost,
-.profilePhotoActions .btn-del {
-  padding: 9px 14px;
-  font-size: 0.9rem;
-  border-radius: 14px;
-}
-
-.profileCleanInfo h1 {
-  font-size: clamp(2.1rem, 4vw, 3.7rem);
-  line-height: 1;
-  margin: 8px 0 8px;
-  max-width: 850px;
-}
-
-.profileCleanInfo .msg {
-  margin: 0 0 14px;
-}
-
-.profileDescription {
-  max-width: 680px;
-  margin: 0;
-  font-size: 1rem;
-  line-height: 1.5;
-}
-
-.profileCleanActions {
-  margin-top: 18px;
-  gap: 10px;
-}
-
-.profileCleanActions a,
-.profileCleanActions button {
-  text-decoration: none;
-}
-
-.profileCleanActions .badge {
-  min-height: 38px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 16px;
-  border-radius: 999px;
-  font-size: 0.9rem;
-}
-
-.profileBadgeButton {
-  background: rgba(239, 68, 68, 0.12);
-  color: #fecaca;
-  border: 1px solid rgba(239, 68, 68, 0.25);
-}
-
-.profileMinimalGrid {
-  grid-template-columns: 1fr 0.65fr;
-  gap: 20px;
-}
-
-.profilePanel {
-  padding: 28px;
-}
-
-.profileSectionHeader h2 {
-  font-size: 1.75rem;
-  margin-bottom: 8px;
-}
-
-.profileSectionHeader p {
-  font-size: 0.95rem;
-  line-height: 1.5;
-}
-
-.profileSimpleList {
-  gap: 10px;
-}
-
-.profileSimpleList div {
-  min-height: 58px;
-  padding: 14px 16px;
-  border-radius: 16px;
-}
-
-.permissionList {
-  gap: 10px;
-}
-
-.permissionItem {
-  min-height: 52px;
-  border-radius: 16px;
-}
-
-/* Quita sensación de tarjetas gigantes */
-.profileHero,
-.profileCleanHero,
-.profilePanel {
-  background-size: 360px;
-}
-
-/* Responsive */
-@media (max-width: 900px) {
-  .profileCleanHero {
-    grid-template-columns: 1fr;
-    text-align: left;
-  }
-
-  .profilePhotoBlock {
-    align-items: flex-start;
-  }
-
-  .profileMinimalGrid {
-    grid-template-columns: 1fr;
-  }
-}
 
 @media (max-width: 640px) {
   .profileCleanHero {
-    padding: 24px;
+    padding: 20px;
   }
 
   .profileCleanInfo h1 {
-    font-size: 2.3rem;
+    font-size: 2.2rem;
   }
 
   .profilePhotoButton {
@@ -584,91 +589,38 @@ html.dark .profileRole.role-administrador {
     border-radius: 24px;
   }
 
+  .profilePhotoButton span {
+    font-size: 2rem;
+  }
+
   .profileCleanActions {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .profileCleanActions .badge,
+  .profileCleanActions .profileAction,
   .profileCleanActions button {
     width: 100%;
   }
-}
-.profileAction {
-  min-height: 38px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 16px;
-  border-radius: 999px;
-  text-decoration: none;
-  font-weight: 900;
-  font-size: 0.9rem;
-  color: var(--text);
-  background: rgba(255, 255, 255, 0.055);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  cursor: pointer;
-}
 
-.profileAction:hover {
-  background: rgba(255, 255, 255, 0.09);
-}
+  .profileHeroLeft {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 
-.profileAction.primary {
-  color: #bbf7d0;
-  background: rgba(34, 197, 94, 0.12);
-  border-color: rgba(34, 197, 94, 0.22);
-}
+  .profileAvatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 20px;
+    font-size: 21px;
+  }
 
-.profileAction.danger {
-  color: #fecaca;
-  background: rgba(239, 68, 68, 0.12);
-  border-color: rgba(239, 68, 68, 0.22);
-}
-/* Arreglo final de foto de perfil */
+  .profileGrid {
+    grid-template-columns: 1fr;
+  }
 
-.profilePhotoButton {
-  width: 128px;
-  height: 128px;
-  padding: 0;
-  border: 3px solid rgba(255, 255, 255, 0.1);
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.04) !important;
-  overflow: hidden;
-  box-shadow: none;
-}
-
-.profilePhotoButton img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 25px;
-}
-
-.profilePhotoButton span {
-  width: 100%;
-  height: 100%;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, #1d4ed8, #0f766e);
-  color: white;
-  font-size: 2.4rem;
-  font-weight: 900;
-}
-
-.profilePhotoButton:hover {
-  transform: none;
-  filter: brightness(1.04);
-}
-
-.profilePhotoActions {
-  margin-top: 10px;
-}
-
-.profilePhotoActions .btn-ghost,
-.profilePhotoActions .btn-del {
-  min-height: 38px;
-  padding: 0 16px;
-  border-radius: 14px;
+  .profileHeroRight .btn-del,
+  .profileRole {
+    width: 100%;
+  }
 }

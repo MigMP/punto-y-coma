@@ -1,3 +1,5 @@
+// Archivo: backend/src/routes/auth.routes.js
+
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -10,10 +12,108 @@ const { isValidRole, ROLES } = require("../utils/roles");
 const router = express.Router();
 
 const ALUMNO_EMAIL_RE = /^[^\s@]+@alumno\.ipn\.mx$/i;
+const MAESTRO_EMAIL_RE = /^[^\s@]+@ipn\.mx$/i;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const PASSWORD_MIN_LENGTH = 8;
+
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_BLOCK_TIME_MS = 10 * 60 * 1000;
+
+const loginAttempts = new Map();
 
 function normalizeEmail(value) {
   return String(value || "").trim().toLowerCase();
+}
+
+function normalizeRole(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function normalizeTeacherCode(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+function getLoginAttemptKey(email, req) {
+  const ip =
+    req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
+    req.socket.remoteAddress ||
+    "unknown";
+
+  return `${normalizeEmail(email)}:${ip}`;
+}
+
+function getLoginBlockInfo(key) {
+  const attempt = loginAttempts.get(key);
+
+  if (!attempt) return null;
+
+  if (attempt.blockedUntil && attempt.blockedUntil > Date.now()) {
+    const remainingMs = attempt.blockedUntil - Date.now();
+    const remainingMinutes = Math.ceil(remainingMs / 60000);
+
+    return {
+      blocked: true,
+      remainingMinutes,
+    };
+  }
+
+  if (attempt.blockedUntil && attempt.blockedUntil <= Date.now()) {
+    loginAttempts.delete(key);
+  }
+
+  return null;
+}
+
+function registerFailedLogin(key) {
+  const current = loginAttempts.get(key) || {
+    count: 0,
+    blockedUntil: null,
+  };
+
+  const nextCount = current.count + 1;
+
+  if (nextCount >= MAX_LOGIN_ATTEMPTS) {
+    loginAttempts.set(key, {
+      count: nextCount,
+      blockedUntil: Date.now() + LOGIN_BLOCK_TIME_MS,
+    });
+
+    return true;
+  }
+
+  loginAttempts.set(key, {
+    count: nextCount,
+    blockedUntil: null,
+  });
+
+  return false;
+}
+
+function clearLoginAttempts(key) {
+  loginAttempts.delete(key);
+}
+
+function validatePassword(password) {
+  const value = String(password || "");
+
+  if (value.length < PASSWORD_MIN_LENGTH) {
+    return `La contraseña debe tener mínimo ${PASSWORD_MIN_LENGTH} caracteres`;
+  }
+
+  if (!/[A-ZÁÉÍÓÚÑ]/.test(value)) {
+    return "La contraseña debe incluir al menos una mayúscula";
+  }
+
+  if (!/[a-záéíóúñ]/.test(value)) {
+    return "La contraseña debe incluir al menos una minúscula";
+  }
+
+  if (!/\d/.test(value)) {
+    return "La contraseña debe incluir al menos un número";
+  }
+
+  return null;
 }
 
 function publicUser(user) {
@@ -49,9 +149,10 @@ router.post("/register", async (req, res) => {
     const name = String(req.body.name || "").trim();
     const email = normalizeEmail(req.body.email);
     const password = String(req.body.password || "");
-    const role = String(req.body.role || "").trim();
+    const role = normalizeRole(req.body.role);
     const grupo = String(req.body.grupo || "").trim().toUpperCase();
     const boleta = String(req.body.boleta || "").replace(/\D/g, "").slice(0, 10);
+    const teacherCode = normalizeTeacherCode(req.body.teacherCode);
 
     if (!name) {
       return res.status(400).json({
@@ -65,9 +166,11 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    if (!password || password.length < 4) {
+    const passwordError = validatePassword(password);
+
+    if (passwordError) {
       return res.status(400).json({
-        error: "Contraseña mínimo 4 caracteres",
+        error: passwordError,
       });
     }
 
@@ -121,6 +224,41 @@ router.post("/register", async (req, res) => {
       }
     }
 
+    let teacherCodeItem = null;
+
+    if (role === ROLES.MAESTRO) {
+      if (!MAESTRO_EMAIL_RE.test(email)) {
+        return res.status(400).json({
+          error:
+            "Como maestro, debes registrarte con tu correo institucional @ipn.mx",
+        });
+      }
+
+      if (!teacherCode) {
+        return res.status(400).json({
+          error: "Código docente obligatorio",
+        });
+      }
+
+      const teacherCodes = await getCollection("teacherCodes");
+
+      teacherCodeItem = teacherCodes.find(
+        (item) => normalizeTeacherCode(item.code) === teacherCode
+      );
+
+      if (!teacherCodeItem) {
+        return res.status(403).json({
+          error: "Código docente inválido",
+        });
+      }
+
+      if (teacherCodeItem.used) {
+        return res.status(409).json({
+          error: "Este código docente ya fue usado",
+        });
+      }
+    }
+
     const exists = users.some((user) => normalizeEmail(user.email) === email);
 
     if (exists) {
@@ -154,6 +292,16 @@ router.post("/register", async (req, res) => {
 
     await saveDocument("users", user);
 
+    if (role === ROLES.MAESTRO && teacherCodeItem) {
+      await saveDocument("teacherCodes", {
+        ...teacherCodeItem,
+        used: true,
+        usedBy: email,
+        usedAt: now,
+        updatedAt: now,
+      });
+    }
+
     return res.status(201).json({
       ok: true,
       user: publicUser(user),
@@ -173,6 +321,15 @@ router.post("/login", async (req, res) => {
     const email = normalizeEmail(req.body.email);
     const password = String(req.body.password || "");
 
+    const attemptKey = getLoginAttemptKey(email, req);
+    const blockInfo = getLoginBlockInfo(attemptKey);
+
+    if (blockInfo?.blocked) {
+      return res.status(429).json({
+        error: `Demasiados intentos fallidos. Intenta de nuevo en ${blockInfo.remainingMinutes} minuto(s).`,
+      });
+    }
+
     if (!EMAIL_RE.test(email) || !password) {
       return res.status(400).json({
         error: "Correo y contraseña obligatorios",
@@ -182,6 +339,8 @@ router.post("/login", async (req, res) => {
     const user = users.find((item) => normalizeEmail(item.email) === email);
 
     if (!user) {
+      registerFailedLogin(attemptKey);
+
       return res.status(401).json({
         error: "Credenciales incorrectas",
       });
@@ -196,10 +355,14 @@ router.post("/login", async (req, res) => {
     const ok = await bcrypt.compare(password, user.passwordHash || "");
 
     if (!ok) {
+      registerFailedLogin(attemptKey);
+
       return res.status(401).json({
         error: "Credenciales incorrectas",
       });
     }
+
+    clearLoginAttempts(attemptKey);
 
     const token = createToken(user);
 

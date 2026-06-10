@@ -1,4 +1,12 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+// Archivo: frontend/src/state/AuthContext.jsx
+
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 const AuthContext = createContext(null);
 
@@ -19,9 +27,34 @@ function readStoredToken() {
   }
 }
 
+function normalizeUser(user) {
+  if (!user || typeof user !== "object") {
+    return null;
+  }
+
+  return {
+    ...user,
+    email: String(user.email || "").trim().toLowerCase(),
+    role: String(user.role || "").trim().toLowerCase(),
+    nombre: String(user.nombre || user.name || "").trim(),
+  };
+}
+
 function saveSession(token, user) {
-  localStorage.setItem("token", token);
-  localStorage.setItem("user", JSON.stringify(user));
+  const safeToken = String(token || "").trim();
+  const safeUser = normalizeUser(user);
+
+  if (!safeToken || !safeUser?.email || !safeUser?.role) {
+    throw new Error("Sesión inválida: falta token, correo o rol.");
+  }
+
+  localStorage.setItem("token", safeToken);
+  localStorage.setItem("user", JSON.stringify(safeUser));
+
+  return {
+    token: safeToken,
+    user: safeUser,
+  };
 }
 
 function clearSession() {
@@ -31,7 +64,7 @@ function clearSession() {
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(readStoredToken);
-  const [user, setUser] = useState(readStoredUser);
+  const [user, setUser] = useState(() => normalizeUser(readStoredUser()));
 
   useEffect(() => {
     const handleLogout = () => {
@@ -49,33 +82,38 @@ export function AuthProvider({ children }) {
 
   const value = useMemo(() => {
     const login = ({ token: nextToken, user: nextUser }) => {
-      if (!nextToken || !nextUser) {
-        throw new Error("Sesión inválida: falta token o usuario.");
-      }
+      const session = saveSession(nextToken, nextUser);
 
-      setToken(nextToken);
-      setUser(nextUser);
-      saveSession(nextToken, nextUser);
+      setToken(session.token);
+      setUser(session.user);
+
+      return session;
     };
 
     const logout = () => {
       setToken("");
       setUser(null);
       clearSession();
+
+      window.dispatchEvent(new Event("auth:session-cleared"));
     };
 
     const updateUser = (nextUser) => {
-      setUser(nextUser);
+      const safeUser = normalizeUser(nextUser);
 
-      if (nextUser) {
-        localStorage.setItem("user", JSON.stringify(nextUser));
+      setUser(safeUser);
+
+      if (safeUser) {
+        localStorage.setItem("user", JSON.stringify(safeUser));
       } else {
         localStorage.removeItem("user");
       }
+
+      return safeUser;
     };
 
     const refreshUser = () => {
-      const storedUser = readStoredUser();
+      const storedUser = normalizeUser(readStoredUser());
       const storedToken = readStoredToken();
 
       setUser(storedUser);
@@ -87,14 +125,24 @@ export function AuthProvider({ children }) {
       };
     };
 
+    const hasRole = (roles = []) => {
+      if (!user?.role) return false;
+
+      const allowedRoles = Array.isArray(roles) ? roles : [roles];
+
+      return allowedRoles.includes(user.role);
+    };
+
     return {
       token,
       user,
+      role: user?.role || "",
       isAuthed: Boolean(token),
       login,
       logout,
       updateUser,
       refreshUser,
+      hasRole,
     };
   }, [token, user]);
 

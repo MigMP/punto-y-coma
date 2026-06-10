@@ -1,4 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+// Archivo: frontend/src/pages/Tareas.jsx
+
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import NavBar from "../components/layout/NavBar.jsx";
 import { useAuth } from "../state/AuthContext.jsx";
 import { apiJSON } from "../services/api.js";
@@ -19,6 +21,15 @@ const PRIORITY_OPTIONS = [
   { value: "baja", label: "Baja" },
 ];
 
+function toArray(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.results)) return data.results;
+
+  return [];
+}
+
 function statusLabel(status) {
   const item = STATUS_OPTIONS.find((option) => option.value === status);
   return item?.label || "Pendiente";
@@ -32,33 +43,75 @@ function priorityLabel(priority) {
 function statusClass(status) {
   if (status === "completada") return "ok";
   if (status === "en_progreso") return "warn";
+
   return "";
 }
 
 function priorityClass(priority) {
   if (priority === "alta") return "bad";
   if (priority === "media") return "warn";
+
   return "ok";
 }
 
 function formatDate(value) {
   if (!value) return "Sin fecha";
 
-  try {
-    return new Intl.DateTimeFormat("es-MX", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date(value));
-  } catch {
-    return value;
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Sin fecha";
   }
+
+  return new Intl.DateTimeFormat("es-MX", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function getUserName(user) {
+  return user?.nombre || user?.name || user?.email || "Usuario";
+}
+
+function validateTaskForm(form) {
+  const titulo = form.titulo.trim();
+  const descripcion = form.descripcion.trim();
+
+  if (!form.alumnoEmail || !form.materiaId || !titulo || !descripcion) {
+    return "Completa alumno, materia, título y descripción.";
+  }
+
+  if (titulo.length < 4) {
+    return "El título debe tener mínimo 4 caracteres.";
+  }
+
+  if (titulo.length > 100) {
+    return "El título no puede pasar de 100 caracteres.";
+  }
+
+  if (descripcion.length < 8) {
+    return "La descripción debe tener mínimo 8 caracteres.";
+  }
+
+  if (descripcion.length > 800) {
+    return "La descripción no puede pasar de 800 caracteres.";
+  }
+
+  if (!PRIORITY_OPTIONS.some((option) => option.value === form.prioridad)) {
+    return "Selecciona una prioridad válida.";
+  }
+
+  return "";
 }
 
 export default function Tareas() {
   const { user, token: ctxToken } = useAuth();
   const { showToast } = useToast();
   const confirm = useConfirm();
-  const token = useMemo(() => ctxToken || localStorage.getItem("token") || "", [ctxToken]);
+
+  const token = useMemo(() => {
+    return ctxToken || localStorage.getItem("token") || "";
+  }, [ctxToken]);
 
   const [tareas, setTareas] = useState([]);
   const [alumnos, setAlumnos] = useState([]);
@@ -82,21 +135,30 @@ export default function Tareas() {
 
   useEffect(() => {
     document.body.classList.add("app-bg");
-    return () => document.body.classList.remove("app-bg");
+
+    return () => {
+      document.body.classList.remove("app-bg");
+    };
   }, []);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    if (!token) {
+      setTareas([]);
+      setMaterias([]);
+      setAlumnos([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
-      const tasksPath = statusFilter === "ALL"
-        ? "/tareas"
-        : `/tareas?status=${encodeURIComponent(statusFilter)}`;
+      const tasksPath =
+        statusFilter === "ALL"
+          ? "/tareas"
+          : `/tareas?status=${encodeURIComponent(statusFilter)}`;
 
-      const requests = [
-        apiJSON(tasksPath, { token }),
-        apiJSON("/materias", { token }),
-      ];
+      const requests = [apiJSON(tasksPath, { token }), apiJSON("/materias", { token })];
 
       if (role !== "alumno") {
         requests.push(apiJSON("/alumnos", { token }));
@@ -104,9 +166,9 @@ export default function Tareas() {
 
       const [tareasData, materiasData, alumnosData] = await Promise.all(requests);
 
-      const tareasArr = Array.isArray(tareasData) ? tareasData : [];
-      const materiasArr = Array.isArray(materiasData) ? materiasData : [];
-      const alumnosArr = Array.isArray(alumnosData) ? alumnosData : [];
+      const tareasArr = toArray(tareasData);
+      const materiasArr = toArray(materiasData);
+      const alumnosArr = toArray(alumnosData);
 
       setTareas(tareasArr);
       setMaterias(materiasArr);
@@ -114,8 +176,10 @@ export default function Tareas() {
 
       setForm((prev) => ({
         ...prev,
-        materiaId: prev.materiaId || (materiasArr[0]?.id ? String(materiasArr[0].id) : ""),
-        alumnoEmail: prev.alumnoEmail || (alumnosArr[0]?.email || ""),
+        materiaId:
+          prev.materiaId ||
+          (materiasArr[0]?.id ? String(materiasArr[0].id) : ""),
+        alumnoEmail: prev.alumnoEmail || alumnosArr[0]?.email || "",
       }));
     } catch (error) {
       showToast({
@@ -126,16 +190,14 @@ export default function Tareas() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, role, statusFilter, showToast]);
 
   useEffect(() => {
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter]);
+  }, [loadData]);
 
   const tareasFiltradas = useMemo(() => {
     const term = query.trim().toLowerCase();
-
     let data = [...tareas];
 
     if (term) {
@@ -161,12 +223,17 @@ export default function Tareas() {
       const priorityValue = { alta: 3, media: 2, baja: 1 };
       const statusValue = { pendiente: 3, en_progreso: 2, completada: 1 };
 
-      const aScore = (priorityValue[a.prioridad] || 0) + (statusValue[a.status] || 0);
-      const bScore = (priorityValue[b.prioridad] || 0) + (statusValue[b.status] || 0);
+      const aScore =
+        (priorityValue[a.prioridad] || 0) + (statusValue[a.status] || 0);
+      const bScore =
+        (priorityValue[b.prioridad] || 0) + (statusValue[b.status] || 0);
 
       if (bScore !== aScore) return bScore - aScore;
 
-      return new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0);
+      const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+      const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+
+      return dateB - dateA;
     });
   }, [tareas, query]);
 
@@ -197,11 +264,13 @@ export default function Tareas() {
   const createTask = async (event) => {
     event.preventDefault();
 
-    if (!form.alumnoEmail || !form.materiaId || !form.titulo.trim() || !form.descripcion.trim()) {
+    const error = validateTaskForm(form);
+
+    if (error) {
       showToast({
         type: "warning",
-        title: "Faltan datos",
-        message: "Completa alumno, materia, título y descripción.",
+        title: "Revisa los datos",
+        message: error,
       });
       return;
     }
@@ -239,7 +308,7 @@ export default function Tareas() {
       showToast({
         type: "error",
         title: "No se pudo crear",
-        message: error.message,
+        message: error.message || "Intenta nuevamente.",
       });
     } finally {
       setSaving(false);
@@ -247,6 +316,15 @@ export default function Tareas() {
   };
 
   const updateStatus = async (task, status) => {
+    if (task.status === status) {
+      showToast({
+        type: "info",
+        title: "Sin cambios",
+        message: "La tarea ya tiene ese estado.",
+      });
+      return;
+    }
+
     try {
       await apiJSON(`/tareas/${task.id}/status`, {
         token,
@@ -265,7 +343,7 @@ export default function Tareas() {
       showToast({
         type: "error",
         title: "No se actualizó",
-        message: error.message,
+        message: error.message || "Intenta nuevamente.",
       });
     }
   };
@@ -298,7 +376,7 @@ export default function Tareas() {
       showToast({
         type: "error",
         title: "No se eliminó",
-        message: error.message,
+        message: error.message || "Intenta nuevamente.",
       });
     }
   };
@@ -307,7 +385,7 @@ export default function Tareas() {
     const lines = [
       "Tareas académicas - Punto y Coma",
       "",
-      `Usuario: ${user?.name || "Usuario"}`,
+      `Usuario: ${getUserName(user)}`,
       `Total: ${resumen.total}`,
       `Pendientes: ${resumen.pendiente}`,
       `En progreso: ${resumen.progreso}`,
@@ -317,7 +395,9 @@ export default function Tareas() {
       "Listado:",
       ...tareasFiltradas.map(
         (task) =>
-          `- ${task.titulo} | ${task.alumnoNombre || task.alumnoEmail} | ${task.materiaNombre} | ${statusLabel(task.status)}`
+          `- ${task.titulo || "Sin título"} | ${
+            task.alumnoNombre || task.alumnoEmail || "Alumno"
+          } | ${task.materiaNombre || "Materia"} | ${statusLabel(task.status)}`
       ),
     ];
 
@@ -346,12 +426,19 @@ export default function Tareas() {
         <section className="card row-between">
           <div>
             <h1>Tareas académicas</h1>
+
             <p className="msg">
-              {user?.name || "Usuario"} · Recomendaciones y seguimiento de actividades de mejora.
+              {getUserName(user)} · Recomendaciones y seguimiento de actividades
+              de mejora.
             </p>
           </div>
 
-          <button type="button" className="btn-ghost" onClick={loadData}>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={loadData}
+            disabled={loading || saving}
+          >
             {loading ? "Cargando..." : "Actualizar"}
           </button>
         </section>
@@ -385,8 +472,10 @@ export default function Tareas() {
         {canCreate && (
           <section className="card">
             <h2>Crear recomendación académica</h2>
+
             <p className="msg">
-              Registra una tarea concreta para apoyar el seguimiento de un alumno.
+              Registra una tarea concreta para apoyar el seguimiento de un
+              alumno.
             </p>
 
             <form className="gridX planSpacingSmall" onSubmit={createTask}>
@@ -396,12 +485,14 @@ export default function Tareas() {
                   name="alumnoEmail"
                   value={form.alumnoEmail}
                   onChange={handleFormChange}
-                  disabled={!alumnos.length || saving}
+                  disabled={!alumnos.length || saving || loading}
                 >
                   <option value="">Selecciona un alumno</option>
+
                   {alumnos.map((alumno) => (
                     <option key={alumno.email} value={alumno.email}>
-                      {alumno.name} · {alumno.email}
+                      {alumno.nombre || alumno.name || alumno.email} ·{" "}
+                      {alumno.email}
                     </option>
                   ))}
                 </select>
@@ -413,9 +504,10 @@ export default function Tareas() {
                   name="materiaId"
                   value={form.materiaId}
                   onChange={handleFormChange}
-                  disabled={!materias.length || saving}
+                  disabled={!materias.length || saving || loading}
                 >
                   <option value="">Selecciona una materia</option>
+
                   {materias.map((materia) => (
                     <option key={materia.id} value={materia.id}>
                       {materia.nombre}
@@ -431,7 +523,7 @@ export default function Tareas() {
                   value={form.titulo}
                   onChange={handleFormChange}
                   placeholder="Ej. Repasar ecuaciones lineales"
-                  disabled={saving}
+                  disabled={saving || loading}
                 />
               </label>
 
@@ -441,7 +533,7 @@ export default function Tareas() {
                   name="prioridad"
                   value={form.prioridad}
                   onChange={handleFormChange}
-                  disabled={saving}
+                  disabled={saving || loading}
                 >
                   {PRIORITY_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -458,12 +550,15 @@ export default function Tareas() {
                   value={form.descripcion}
                   onChange={handleFormChange}
                   placeholder="Describe qué debe realizar el alumno"
-                  disabled={saving}
+                  disabled={saving || loading}
                 />
               </label>
 
               <div className="metaActions">
-                <button type="submit" disabled={saving}>
+                <button
+                  type="submit"
+                  disabled={saving || loading || !alumnos.length || !materias.length}
+                >
                   {saving ? "Guardando..." : "Crear tarea"}
                 </button>
               </div>
@@ -481,13 +576,19 @@ export default function Tareas() {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Título, alumno, materia o prioridad"
+                disabled={loading}
               />
             </label>
 
             <label>
               Estado
-              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+              <select
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value)}
+                disabled={loading}
+              >
                 <option value="ALL">Todos</option>
+
                 {STATUS_OPTIONS.map((option) => (
                   <option value={option.value} key={option.value}>
                     {option.label}
@@ -498,7 +599,12 @@ export default function Tareas() {
           </div>
 
           <div className="row planWrap planSpacingSmall">
-            <button type="button" className="btn-ghost" onClick={copySummary}>
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={copySummary}
+              disabled={loading || !tareasFiltradas.length}
+            >
               Copiar resumen
             </button>
 
@@ -515,10 +621,16 @@ export default function Tareas() {
             {tareasFiltradas.map((task) => (
               <div className="item" key={task.id}>
                 <div className="textClamp">
-                  <strong>{task.titulo}</strong>
-                  <p className="muted">{task.descripcion}</p>
+                  <strong>{task.titulo || "Tarea sin título"}</strong>
+
                   <p className="muted">
-                    {task.alumnoNombre || task.alumnoEmail} · {task.materiaNombre} · {formatDate(task.updatedAt || task.createdAt)}
+                    {task.descripcion || "Sin descripción."}
+                  </p>
+
+                  <p className="muted">
+                    {task.alumnoNombre || task.alumnoEmail || "Alumno"} ·{" "}
+                    {task.materiaNombre || "Materia"} ·{" "}
+                    {formatDate(task.updatedAt || task.createdAt)}
                   </p>
                 </div>
 
@@ -535,6 +647,7 @@ export default function Tareas() {
                     value={task.status}
                     onChange={(event) => updateStatus(task, event.target.value)}
                     className="metaInput"
+                    disabled={loading}
                   >
                     {STATUS_OPTIONS.map((option) => (
                       <option value={option.value} key={option.value}>
@@ -544,7 +657,12 @@ export default function Tareas() {
                   </select>
 
                   {canDelete && (
-                    <button type="button" className="btn-del" onClick={() => deleteTask(task)}>
+                    <button
+                      type="button"
+                      className="btn-del"
+                      onClick={() => deleteTask(task)}
+                      disabled={loading || saving}
+                    >
                       Eliminar
                     </button>
                   )}
@@ -554,7 +672,9 @@ export default function Tareas() {
 
             {!tareasFiltradas.length && (
               <p className="msg">
-                {loading ? "Cargando tareas..." : "No hay tareas que coincidan con los filtros."}
+                {loading
+                  ? "Cargando tareas..."
+                  : "No hay tareas que coincidan con los filtros."}
               </p>
             )}
           </div>

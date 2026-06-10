@@ -1,3 +1,5 @@
+// Archivo: backend/src/config/firebase.js
+
 const admin = require("firebase-admin");
 const path = require("path");
 
@@ -9,7 +11,6 @@ const {
   FIREBASE_PRIVATE_KEY,
 } = require("./env");
 
-let app = null;
 let db = null;
 
 function shouldUseFirebase() {
@@ -23,7 +24,13 @@ function getServiceAccountFromFile() {
     ? FIREBASE_SERVICE_ACCOUNT_PATH
     : path.join(__dirname, "../../", FIREBASE_SERVICE_ACCOUNT_PATH);
 
-  return require(fullPath);
+  try {
+    return require(fullPath);
+  } catch (error) {
+    throw new Error(
+      `No se pudo leer el archivo de credenciales Firebase: ${error.message}`
+    );
+  }
 }
 
 function getFirebaseCredential() {
@@ -35,7 +42,7 @@ function getFirebaseCredential() {
 
   if (!FIREBASE_PROJECT_ID || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
     throw new Error(
-      "Faltan credenciales Firebase. Usa FIREBASE_SERVICE_ACCOUNT_PATH o configura PROJECT_ID, CLIENT_EMAIL y PRIVATE_KEY."
+      "Faltan credenciales Firebase. Configura FIREBASE_SERVICE_ACCOUNT_PATH o las variables FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL y FIREBASE_PRIVATE_KEY."
     );
   }
 
@@ -51,15 +58,13 @@ function getFirebaseApp() {
     return null;
   }
 
-  if (app) {
-    return app;
+  if (admin.apps.length > 0) {
+    return admin.app();
   }
 
-  app = admin.initializeApp({
+  return admin.initializeApp({
     credential: getFirebaseCredential(),
   });
-
-  return app;
 }
 
 function getFirestore() {

@@ -1,3 +1,5 @@
+// Archivo: backend/src/routes/users.routes.js
+
 const express = require("express");
 const bcrypt = require("bcryptjs");
 
@@ -7,11 +9,43 @@ const { ROLES } = require("../utils/roles");
 
 const router = express.Router();
 
+const PASSWORD_MIN_LENGTH = 8;
+
+function normalizeEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function normalizeText(value) {
+  return String(value || "").trim().replace(/\s+/g, " ");
+}
+
+function validatePassword(password) {
+  const value = String(password || "");
+
+  if (value.length < PASSWORD_MIN_LENGTH) {
+    return `La nueva contraseña debe tener mínimo ${PASSWORD_MIN_LENGTH} caracteres`;
+  }
+
+  if (!/[A-ZÁÉÍÓÚÑ]/.test(value)) {
+    return "La nueva contraseña debe incluir al menos una mayúscula";
+  }
+
+  if (!/[a-záéíóúñ]/.test(value)) {
+    return "La nueva contraseña debe incluir al menos una minúscula";
+  }
+
+  if (!/\d/.test(value)) {
+    return "La nueva contraseña debe incluir al menos un número";
+  }
+
+  return null;
+}
+
 function publicUser(user) {
   return {
     id: user.id,
-    name: user.name,
-    email: user.email,
+    name: normalizeText(user.name),
+    email: normalizeEmail(user.email),
     role: user.role,
     grupo: user.grupo || "",
     boleta: user.boleta || "",
@@ -19,6 +53,14 @@ function publicUser(user) {
     createdAt: user.createdAt || "",
     updatedAt: user.updatedAt || "",
   };
+}
+
+function sortUsersByName(users) {
+  return [...users].sort((a, b) =>
+    String(a.name || "").localeCompare(String(b.name || ""), "es", {
+      sensitivity: "base",
+    })
+  );
 }
 
 router.get("/me", auth, async (req, res) => {
@@ -32,6 +74,12 @@ router.get("/me", auth, async (req, res) => {
     if (!user) {
       return res.status(404).json({
         error: "Usuario no encontrado",
+      });
+    }
+
+    if (user.status && user.status !== "active") {
+      return res.status(403).json({
+        error: "Cuenta desactivada",
       });
     }
 
@@ -56,9 +104,11 @@ router.patch("/me/password", auth, async (req, res) => {
       });
     }
 
-    if (newPassword.length < 4) {
+    const passwordError = validatePassword(newPassword);
+
+    if (passwordError) {
       return res.status(400).json({
-        error: "La nueva contraseña debe tener mínimo 4 caracteres",
+        error: passwordError,
       });
     }
 
@@ -130,9 +180,9 @@ router.get("/maestros", auth, requireRole(ROLES.ADMIN), async (req, res) => {
   try {
     const users = await getCollection("users");
 
-    const maestros = users
-      .filter((user) => user.role === ROLES.MAESTRO)
-      .map(publicUser);
+    const maestros = sortUsersByName(
+      users.filter((user) => user.role === ROLES.MAESTRO)
+    ).map(publicUser);
 
     return res.json(maestros);
   } catch (error) {
@@ -147,9 +197,9 @@ router.get("/alumnos", auth, requireRole(ROLES.ADMIN, ROLES.MAESTRO), async (req
   try {
     const users = await getCollection("users");
 
-    const alumnos = users
-      .filter((user) => user.role === ROLES.ALUMNO)
-      .map(publicUser);
+    const alumnos = sortUsersByName(
+      users.filter((user) => user.role === ROLES.ALUMNO)
+    ).map(publicUser);
 
     return res.json(alumnos);
   } catch (error) {

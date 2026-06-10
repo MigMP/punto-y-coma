@@ -1,3 +1,5 @@
+// Archivo: backend/src/routes/tasks.routes.js
+
 const express = require("express");
 
 const {
@@ -13,6 +15,13 @@ const { ROLES } = require("../utils/roles");
 const router = express.Router();
 
 const VALID_STATUS = ["pendiente", "en_progreso", "completada"];
+const VALID_PRIORITIES = ["alta", "media", "baja"];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const TITLE_MIN_LENGTH = 4;
+const TITLE_MAX_LENGTH = 100;
+const DESCRIPTION_MIN_LENGTH = 8;
+const DESCRIPTION_MAX_LENGTH = 800;
 
 function normalizeEmail(value) {
   return String(value || "").trim().toLowerCase();
@@ -22,13 +31,52 @@ function normalizeText(value) {
   return String(value || "").trim().replace(/\s+/g, " ");
 }
 
+function parsePositiveId(value) {
+  const id = Number(value);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    return null;
+  }
+
+  return id;
+}
+
+function normalizeStatus(value) {
+  return normalizeText(value).toLowerCase();
+}
+
+function normalizePriority(value) {
+  return normalizeText(value || "media").toLowerCase();
+}
+
+function validateTaskText({ titulo, descripcion }) {
+  if (!titulo || titulo.length < TITLE_MIN_LENGTH) {
+    return `El título debe tener al menos ${TITLE_MIN_LENGTH} caracteres`;
+  }
+
+  if (titulo.length > TITLE_MAX_LENGTH) {
+    return `El título no debe superar ${TITLE_MAX_LENGTH} caracteres`;
+  }
+
+  if (!descripcion || descripcion.length < DESCRIPTION_MIN_LENGTH) {
+    return `La descripción debe tener al menos ${DESCRIPTION_MIN_LENGTH} caracteres`;
+  }
+
+  if (descripcion.length > DESCRIPTION_MAX_LENGTH) {
+    return `La descripción no debe superar ${DESCRIPTION_MAX_LENGTH} caracteres`;
+  }
+
+  return null;
+}
+
 function findAlumno(users, email) {
   const normalizedEmail = normalizeEmail(email);
 
   return users.find(
     (user) =>
       normalizeEmail(user.email) === normalizedEmail &&
-      user.role === ROLES.ALUMNO
+      user.role === ROLES.ALUMNO &&
+      (!user.status || user.status === "active")
   );
 }
 
@@ -68,8 +116,18 @@ function withDetails({ users, materias }, task) {
   return {
     ...task,
     alumnoNombre: alumno?.name || task.alumnoNombre || "(alumno no encontrado)",
-    materiaNombre: materia?.nombre || task.materiaNombre || "(materia no encontrada)",
+    materiaNombre:
+      materia?.nombre || task.materiaNombre || "(materia no encontrada)",
   };
+}
+
+function sortTasks(items) {
+  return [...items].sort((a, b) => {
+    const aDate = new Date(a.updatedAt || a.createdAt || 0).getTime();
+    const bDate = new Date(b.updatedAt || b.createdAt || 0).getTime();
+
+    return bDate - aDate;
+  });
 }
 
 async function createActivity(req, data = {}) {
@@ -142,22 +200,36 @@ router.get("/tareas", auth, async (req, res) => {
       getCollection("asignaciones"),
     ]);
 
-    const status = normalizeText(req.query.status);
+    const status = normalizeStatus(req.query.status);
     const alumnoEmail = normalizeEmail(req.query.alumnoEmail);
 
     let items = tareas.filter((task) => canSeeTask(req, asignaciones, task));
 
-    if (status && status !== "ALL") {
+    if (status && status !== "all") {
+      if (!VALID_STATUS.includes(status)) {
+        return res.status(400).json({
+          error: "Estado inválido",
+        });
+      }
+
       items = items.filter((task) => task.status === status);
     }
 
     if (alumnoEmail && req.user.role !== ROLES.ALUMNO) {
-      items = items.filter((task) => normalizeEmail(task.alumnoEmail) === alumnoEmail);
+      if (!EMAIL_RE.test(alumnoEmail)) {
+        return res.status(400).json({
+          error: "Correo del alumno inválido",
+        });
+      }
+
+      items = items.filter(
+        (task) => normalizeEmail(task.alumnoEmail) === alumnoEmail
+      );
     }
 
-    return res.json(
-      items.map((task) => withDetails({ users, materias }, task))
-    );
+    const detailed = items.map((task) => withDetails({ users, materias }, task));
+
+    return res.json(sortTasks(detailed));
   } catch (error) {
     return res.status(500).json({
       error: "No se pudieron consultar tareas",
@@ -176,14 +248,14 @@ router.post("/tareas", auth, requireRole(ROLES.MAESTRO), async (req, res) => {
     ]);
 
     const alumnoEmail = normalizeEmail(req.body.alumnoEmail);
-    const materiaId = Number(req.body.materiaId);
+    const materiaId = parsePositiveId(req.body.materiaId);
     const titulo = normalizeText(req.body.titulo);
     const descripcion = normalizeText(req.body.descripcion);
-    const prioridad = normalizeText(req.body.prioridad || "media").toLowerCase();
+    const prioridad = normalizePriority(req.body.prioridad);
 
-    if (!alumnoEmail) {
+    if (!alumnoEmail || !EMAIL_RE.test(alumnoEmail)) {
       return res.status(400).json({
-        error: "Correo del alumno obligatorio",
+        error: "Correo del alumno inválido",
       });
     }
 
@@ -191,11 +263,11 @@ router.post("/tareas", auth, requireRole(ROLES.MAESTRO), async (req, res) => {
 
     if (!alumno) {
       return res.status(404).json({
-        error: "Alumno no encontrado",
+        error: "No existe un alumno activo con ese correo",
       });
     }
 
-    if (!Number.isFinite(materiaId)) {
+    if (!materiaId) {
       return res.status(400).json({
         error: "materiaId inválido",
       });
@@ -215,15 +287,17 @@ router.post("/tareas", auth, requireRole(ROLES.MAESTRO), async (req, res) => {
       });
     }
 
-    if (!titulo || titulo.length < 4) {
+    const textError = validateTaskText({ titulo, descripcion });
+
+    if (textError) {
       return res.status(400).json({
-        error: "El título debe tener al menos 4 caracteres",
+        error: textError,
       });
     }
 
-    if (!descripcion || descripcion.length < 8) {
+    if (!VALID_PRIORITIES.includes(prioridad)) {
       return res.status(400).json({
-        error: "La descripción debe tener al menos 8 caracteres",
+        error: "Prioridad inválida. Usa alta, media o baja.",
       });
     }
 
@@ -237,7 +311,7 @@ router.post("/tareas", auth, requireRole(ROLES.MAESTRO), async (req, res) => {
       materiaNombre: materia.nombre,
       titulo,
       descripcion,
-      prioridad: ["alta", "media", "baja"].includes(prioridad) ? prioridad : "media",
+      prioridad,
       status: "pendiente",
       creadoPor: req.user.email,
       createdAt: now,
@@ -270,9 +344,7 @@ router.post("/tareas", auth, requireRole(ROLES.MAESTRO), async (req, res) => {
       entityId: nueva.id,
     });
 
-    return res.status(201).json(
-      withDetails({ users, materias }, nueva)
-    );
+    return res.status(201).json(withDetails({ users, materias }, nueva));
   } catch (error) {
     return res.status(500).json({
       error: "No se pudo crear la tarea",
@@ -283,10 +355,10 @@ router.post("/tareas", auth, requireRole(ROLES.MAESTRO), async (req, res) => {
 
 router.patch("/tareas/:id/status", auth, async (req, res) => {
   try {
-    const id = Number(req.params.id);
-    const status = normalizeText(req.body.status);
+    const id = parsePositiveId(req.params.id);
+    const status = normalizeStatus(req.body.status);
 
-    if (!Number.isFinite(id)) {
+    if (!id) {
       return res.status(400).json({
         error: "ID de tarea inválido",
       });
@@ -329,6 +401,12 @@ router.patch("/tareas/:id/status", auth, async (req, res) => {
     }
 
     const anterior = current.status;
+
+    if (anterior === status) {
+      return res.status(400).json({
+        error: "La tarea ya tiene ese estado",
+      });
+    }
 
     const updated = {
       ...current,
@@ -379,9 +457,9 @@ router.patch("/tareas/:id/status", auth, async (req, res) => {
 
 router.delete("/tareas/:id", auth, requireRole(ROLES.MAESTRO), async (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const id = parsePositiveId(req.params.id);
 
-    if (!Number.isFinite(id)) {
+    if (!id) {
       return res.status(400).json({
         error: "ID de tarea inválido",
       });

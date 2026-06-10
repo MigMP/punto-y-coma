@@ -1,5 +1,8 @@
+// Archivo: backend/src/app.js
+
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
 
 const { CLIENT_ORIGIN, NODE_ENV } = require("./config/env");
 
@@ -16,6 +19,7 @@ const firebaseRoutes = require("./routes/firebase.routes");
 const calendarRoutes = require("./routes/calendar.routes");
 const resourcesRoutes = require("./routes/resources.routes");
 const analyticsRoutes = require("./routes/analytics.routes");
+const teacherCodesRoutes = require("./routes/teacher-codes.routes");
 
 const app = express();
 
@@ -26,6 +30,14 @@ const allowedOrigins = [
 ].filter(Boolean);
 
 app.disable("x-powered-by");
+
+app.use(
+  helmet({
+    crossOriginResourcePolicy: {
+      policy: "cross-origin",
+    },
+  })
+);
 
 app.use(
   cors({
@@ -53,7 +65,7 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
-/* 
+/*
   Ruta principal para comprobar que el backend funciona.
   Esta ruta sirve para tomar la captura de evidencia JSON.
 */
@@ -63,7 +75,7 @@ app.get("/", (req, res) => {
     mensaje: "Backend funcionando correctamente",
     proyecto: "Punto y Coma",
     servidor: "Node.js",
-    puerto: 3001,
+    entorno: NODE_ENV || "development",
   });
 });
 
@@ -80,6 +92,7 @@ app.use("/api", firebaseRoutes);
 app.use("/api", calendarRoutes);
 app.use("/api", resourcesRoutes);
 app.use("/api", analyticsRoutes);
+app.use("/api", teacherCodesRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
@@ -91,6 +104,12 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
   if (NODE_ENV !== "production") {
     console.error(err);
+  }
+
+  if (err.message === "Origen no permitido por CORS") {
+    return res.status(403).json({
+      error: "Origen no permitido por CORS",
+    });
   }
 
   res.status(500).json({

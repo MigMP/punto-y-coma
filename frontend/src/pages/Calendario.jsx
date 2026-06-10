@@ -1,4 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+// Archivo: frontend/src/pages/Calendario.jsx
+
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import NavBar from "../components/layout/NavBar.jsx";
 import { useAuth } from "../state/AuthContext.jsx";
 import { apiJSON } from "../services/api.js";
@@ -22,6 +24,17 @@ const AUDIENCES = [
   { value: "administradores", label: "Administradores" },
 ];
 
+const MAX_EVENT_DURATION_DAYS = 30;
+
+function toArray(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.results)) return data.results;
+
+  return [];
+}
+
 function eventTypeLabel(type) {
   const item = EVENT_TYPES.find((option) => option.value === type);
   return item?.label || "Evento";
@@ -37,20 +50,23 @@ function eventTone(type) {
   if (type === "entrega") return "warn";
   if (type === "asesoria") return "ok";
   if (type === "clase") return "ok";
+
   return "";
 }
 
 function formatDateTime(value) {
   if (!value) return "Sin fecha";
 
-  try {
-    return new Intl.DateTimeFormat("es-MX", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date(value));
-  } catch {
-    return value;
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Sin fecha";
   }
+
+  return new Intl.DateTimeFormat("es-MX", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 }
 
 function toDatetimeLocalValue(date = new Date()) {
@@ -65,11 +81,87 @@ function toDatetimeLocalValue(date = new Date()) {
   return `${year}-${month}-${day}T${hour}:${minute}`;
 }
 
+function getDefaultEventDates() {
+  const start = new Date();
+  start.setHours(start.getHours() + 1);
+  start.setMinutes(0);
+  start.setSeconds(0);
+  start.setMilliseconds(0);
+
+  const end = new Date(start);
+  end.setHours(end.getHours() + 1);
+
+  return {
+    startAt: toDatetimeLocalValue(start),
+    endAt: toDatetimeLocalValue(end),
+  };
+}
+
+function getUserName(user) {
+  return user?.nombre || user?.name || user?.email || "Usuario";
+}
+
+function isValidOption(value, options) {
+  return options.some((option) => option.value === value);
+}
+
+function validateEventForm(form) {
+  const title = form.title.trim();
+  const description = form.description.trim();
+
+  if (!title || !description || !form.startAt || !form.endAt) {
+    return "Completa título, descripción, fecha de inicio y fecha de fin.";
+  }
+
+  if (title.length < 4) {
+    return "El título debe tener mínimo 4 caracteres.";
+  }
+
+  if (title.length > 120) {
+    return "El título no puede pasar de 120 caracteres.";
+  }
+
+  if (description.length > 1000) {
+    return "La descripción no puede pasar de 1000 caracteres.";
+  }
+
+  if (!isValidOption(form.type, EVENT_TYPES)) {
+    return "Selecciona un tipo de evento válido.";
+  }
+
+  if (!isValidOption(form.audience, AUDIENCES)) {
+    return "Selecciona una audiencia válida.";
+  }
+
+  const startDate = new Date(form.startAt);
+  const endDate = new Date(form.endAt);
+
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return "Las fechas del evento no son válidas.";
+  }
+
+  if (endDate.getTime() < startDate.getTime()) {
+    return "La fecha de fin no puede ser anterior a la fecha de inicio.";
+  }
+
+  const durationMs = endDate.getTime() - startDate.getTime();
+  const maxDurationMs = MAX_EVENT_DURATION_DAYS * 24 * 60 * 60 * 1000;
+
+  if (durationMs > maxDurationMs) {
+    return `El evento no puede durar más de ${MAX_EVENT_DURATION_DAYS} días.`;
+  }
+
+  return "";
+}
+
 export default function Calendario() {
   const { user, token: ctxToken } = useAuth();
   const { showToast } = useToast();
   const confirm = useConfirm();
-  const token = useMemo(() => ctxToken || localStorage.getItem("token") || "", [ctxToken]);
+
+  const token = useMemo(() => {
+    return ctxToken || localStorage.getItem("token") || "";
+  }, [ctxToken]);
 
   const role = user?.role;
   const canManage = role === "administrador" || role === "maestro";
@@ -83,12 +175,7 @@ export default function Calendario() {
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState(() => {
-    const start = new Date();
-    start.setHours(start.getHours() + 1);
-    start.setMinutes(0);
-
-    const end = new Date(start);
-    end.setHours(end.getHours() + 1);
+    const dates = getDefaultEventDates();
 
     return {
       title: "",
@@ -96,17 +183,27 @@ export default function Calendario() {
       type: "aviso",
       audience: "todos",
       materiaId: "",
-      startAt: toDatetimeLocalValue(start),
-      endAt: toDatetimeLocalValue(end),
+      startAt: dates.startAt,
+      endAt: dates.endAt,
     };
   });
 
   useEffect(() => {
     document.body.classList.add("app-bg");
-    return () => document.body.classList.remove("app-bg");
+
+    return () => {
+      document.body.classList.remove("app-bg");
+    };
   }, []);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    if (!token) {
+      setEventos([]);
+      setMaterias([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -129,11 +226,8 @@ export default function Calendario() {
         apiJSON("/materias", { token }),
       ]);
 
-      const eventosArr = Array.isArray(eventosData) ? eventosData : [];
-      const materiasArr = Array.isArray(materiasData) ? materiasData : [];
-
-      setEventos(eventosArr);
-      setMaterias(materiasArr);
+      setEventos(toArray(eventosData));
+      setMaterias(toArray(materiasData));
 
       setForm((prev) => ({
         ...prev,
@@ -148,31 +242,39 @@ export default function Calendario() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, typeFilter, upcomingOnly, showToast]);
 
   useEffect(() => {
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [typeFilter, upcomingOnly]);
+  }, [loadData]);
 
   const eventosFiltrados = useMemo(() => {
     const term = query.trim().toLowerCase();
 
-    if (!term) return eventos;
+    let data = [...eventos];
 
-    return eventos.filter((event) => {
-      const searchable = [
-        event.title,
-        event.description,
-        event.type,
-        event.audience,
-        event.materiaNombre,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
+    if (term) {
+      data = data.filter((event) => {
+        const searchable = [
+          event.title,
+          event.description,
+          event.type,
+          event.audience,
+          event.materiaNombre,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
 
-      return searchable.includes(term);
+        return searchable.includes(term);
+      });
+    }
+
+    return data.sort((a, b) => {
+      const dateA = new Date(a.startAt || 0).getTime();
+      const dateB = new Date(b.startAt || 0).getTime();
+
+      return dateA - dateB;
     });
   }, [eventos, query]);
 
@@ -190,8 +292,16 @@ export default function Calendario() {
     const now = Date.now();
 
     return eventos
-      .filter((event) => new Date(event.startAt).getTime() >= now)
-      .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
+      .filter((event) => {
+        const date = new Date(event.startAt).getTime();
+        return Number.isFinite(date) && date >= now;
+      })
+      .sort((a, b) => {
+        const dateA = new Date(a.startAt || 0).getTime();
+        const dateB = new Date(b.startAt || 0).getTime();
+
+        return dateA - dateB;
+      })
       .slice(0, 5);
   }, [eventos]);
 
@@ -207,11 +317,13 @@ export default function Calendario() {
   const createEvent = async (event) => {
     event.preventDefault();
 
-    if (!form.title.trim() || !form.description.trim() || !form.startAt || !form.endAt) {
+    const error = validateEventForm(form);
+
+    if (error) {
       showToast({
         type: "warning",
-        title: "Faltan datos",
-        message: "Completa título, descripción, fecha de inicio y fecha de fin.",
+        title: "Revisa los datos",
+        message: error,
       });
       return;
     }
@@ -233,12 +345,18 @@ export default function Calendario() {
         },
       });
 
-      setForm((prev) => ({
-        ...prev,
-        title: "",
-        description: "",
-        type: "aviso",
-      }));
+      setForm((prev) => {
+        const dates = getDefaultEventDates();
+
+        return {
+          ...prev,
+          title: "",
+          description: "",
+          type: "aviso",
+          startAt: dates.startAt,
+          endAt: dates.endAt,
+        };
+      });
 
       showToast({
         type: "success",
@@ -251,17 +369,17 @@ export default function Calendario() {
       showToast({
         type: "error",
         title: "No se pudo crear",
-        message: error.message,
+        message: error.message || "Intenta nuevamente.",
       });
     } finally {
       setSaving(false);
     }
   };
 
-  const deleteEvent = async (event) => {
+  const deleteEvent = async (calendarEvent) => {
     const ok = await confirm({
       title: "Eliminar evento",
-      message: `¿Seguro que quieres eliminar "${event.title}"?`,
+      message: `¿Seguro que quieres eliminar "${calendarEvent.title}"?`,
       confirmText: "Eliminar",
       cancelText: "Cancelar",
       tone: "danger",
@@ -270,7 +388,7 @@ export default function Calendario() {
     if (!ok) return;
 
     try {
-      await apiJSON(`/calendario/${event.id}`, {
+      await apiJSON(`/calendario/${calendarEvent.id}`, {
         token,
         method: "DELETE",
       });
@@ -278,7 +396,7 @@ export default function Calendario() {
       showToast({
         type: "success",
         title: "Evento eliminado",
-        message: event.title,
+        message: calendarEvent.title,
       });
 
       await loadData();
@@ -286,7 +404,7 @@ export default function Calendario() {
       showToast({
         type: "error",
         title: "No se eliminó",
-        message: error.message,
+        message: error.message || "Intenta nuevamente.",
       });
     }
   };
@@ -295,7 +413,7 @@ export default function Calendario() {
     const lines = [
       "Calendario académico - Punto y Coma",
       "",
-      `Usuario: ${user?.name || "Usuario"}`,
+      `Usuario: ${getUserName(user)}`,
       `Total de eventos: ${resumen.total}`,
       `Exámenes: ${resumen.examenes}`,
       `Entregas: ${resumen.entregas}`,
@@ -305,7 +423,11 @@ export default function Calendario() {
       "Eventos:",
       ...eventosFiltrados.map(
         (event) =>
-          `- ${formatDateTime(event.startAt)} | ${eventTypeLabel(event.type)} | ${event.title} | ${event.materiaNombre || "General"}`
+          `- ${formatDateTime(event.startAt)} | ${eventTypeLabel(
+            event.type
+          )} | ${event.title || "Sin título"} | ${
+            event.materiaNombre || "General"
+          }`
       ),
     ];
 
@@ -334,12 +456,19 @@ export default function Calendario() {
         <section className="card row-between">
           <div>
             <h1>Calendario académico</h1>
+
             <p className="msg">
-              {user?.name || "Usuario"} · Eventos, entregas, exámenes y avisos importantes.
+              {getUserName(user)} · Eventos, entregas, exámenes y avisos
+              importantes.
             </p>
           </div>
 
-          <button type="button" className="btn-ghost" onClick={loadData}>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={loadData}
+            disabled={loading || saving}
+          >
             {loading ? "Cargando..." : "Actualizar"}
           </button>
         </section>
@@ -374,24 +503,28 @@ export default function Calendario() {
           <h2>Próximos eventos</h2>
 
           <div className="lista">
-            {proximosEventos.map((event) => (
-              <div className="item" key={event.id}>
+            {proximosEventos.map((calendarEvent) => (
+              <div className="item" key={calendarEvent.id}>
                 <div>
-                  <strong>{event.title}</strong>
+                  <strong>{calendarEvent.title || "Evento sin título"}</strong>
+
                   <p className="muted">
-                    {formatDateTime(event.startAt)} · {event.materiaNombre || "General"}
+                    {formatDateTime(calendarEvent.startAt)} ·{" "}
+                    {calendarEvent.materiaNombre || "General"}
                   </p>
                 </div>
 
-                <span className={`badge ${eventTone(event.type)}`}>
-                  {eventTypeLabel(event.type)}
+                <span className={`badge ${eventTone(calendarEvent.type)}`}>
+                  {eventTypeLabel(calendarEvent.type)}
                 </span>
               </div>
             ))}
 
             {!proximosEventos.length && (
               <p className="msg">
-                {loading ? "Cargando eventos..." : "No hay próximos eventos registrados."}
+                {loading
+                  ? "Cargando eventos..."
+                  : "No hay próximos eventos registrados."}
               </p>
             )}
           </div>
@@ -400,8 +533,10 @@ export default function Calendario() {
         {canManage && (
           <section className="card">
             <h2>Crear evento</h2>
+
             <p className="msg">
-              Registra exámenes, entregas, asesorías, avisos o clases especiales.
+              Registra exámenes, entregas, asesorías, avisos o clases
+              especiales.
             </p>
 
             <form className="gridX planSpacingSmall" onSubmit={createEvent}>
@@ -412,7 +547,7 @@ export default function Calendario() {
                   value={form.title}
                   onChange={handleFormChange}
                   placeholder="Ej. Examen parcial de base de datos"
-                  disabled={saving}
+                  disabled={saving || loading}
                 />
               </label>
 
@@ -422,7 +557,7 @@ export default function Calendario() {
                   name="type"
                   value={form.type}
                   onChange={handleFormChange}
-                  disabled={saving}
+                  disabled={saving || loading}
                 >
                   {EVENT_TYPES.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -438,7 +573,7 @@ export default function Calendario() {
                   name="audience"
                   value={form.audience}
                   onChange={handleFormChange}
-                  disabled={saving}
+                  disabled={saving || loading}
                 >
                   {AUDIENCES.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -454,9 +589,10 @@ export default function Calendario() {
                   name="materiaId"
                   value={form.materiaId}
                   onChange={handleFormChange}
-                  disabled={saving}
+                  disabled={saving || loading}
                 >
                   <option value="">General</option>
+
                   {materias.map((materia) => (
                     <option key={materia.id} value={materia.id}>
                       {materia.nombre}
@@ -472,7 +608,7 @@ export default function Calendario() {
                   name="startAt"
                   value={form.startAt}
                   onChange={handleFormChange}
-                  disabled={saving}
+                  disabled={saving || loading}
                 />
               </label>
 
@@ -483,7 +619,7 @@ export default function Calendario() {
                   name="endAt"
                   value={form.endAt}
                   onChange={handleFormChange}
-                  disabled={saving}
+                  disabled={saving || loading}
                 />
               </label>
 
@@ -494,12 +630,12 @@ export default function Calendario() {
                   value={form.description}
                   onChange={handleFormChange}
                   placeholder="Describe el evento académico"
-                  disabled={saving}
+                  disabled={saving || loading}
                 />
               </label>
 
               <div className="metaActions">
-                <button type="submit" disabled={saving}>
+                <button type="submit" disabled={saving || loading}>
                   {saving ? "Guardando..." : "Crear evento"}
                 </button>
               </div>
@@ -517,6 +653,7 @@ export default function Calendario() {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Título, materia, tipo o descripción"
+                disabled={loading}
               />
             </label>
 
@@ -525,8 +662,10 @@ export default function Calendario() {
               <select
                 value={typeFilter}
                 onChange={(event) => setTypeFilter(event.target.value)}
+                disabled={loading}
               >
                 <option value="ALL">Todos</option>
+
                 {EVENT_TYPES.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -539,7 +678,10 @@ export default function Calendario() {
               Vista
               <select
                 value={upcomingOnly ? "UPCOMING" : "ALL"}
-                onChange={(event) => setUpcomingOnly(event.target.value === "UPCOMING")}
+                onChange={(event) =>
+                  setUpcomingOnly(event.target.value === "UPCOMING")
+                }
+                disabled={loading}
               >
                 <option value="ALL">Todos</option>
                 <option value="UPCOMING">Solo próximos</option>
@@ -548,7 +690,12 @@ export default function Calendario() {
           </div>
 
           <div className="row planWrap planSpacingSmall">
-            <button type="button" className="btn-ghost" onClick={copySummary}>
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={copySummary}
+              disabled={loading || !eventosFiltrados.length}
+            >
               Copiar resumen
             </button>
 
@@ -562,33 +709,41 @@ export default function Calendario() {
           <h2>Listado de eventos</h2>
 
           <div className="lista">
-            {eventosFiltrados.map((event) => (
-              <div className="item" key={event.id}>
+            {eventosFiltrados.map((calendarEvent) => (
+              <div className="item" key={calendarEvent.id}>
                 <div className="textClamp">
-                  <strong>{event.title}</strong>
-                  <p className="muted">{event.description}</p>
+                  <strong>{calendarEvent.title || "Evento sin título"}</strong>
+
                   <p className="muted">
-                    {formatDateTime(event.startAt)} - {formatDateTime(event.endAt)}
+                    {calendarEvent.description || "Sin descripción."}
                   </p>
+
                   <p className="muted">
-                    {event.materiaNombre || "General"} · {audienceLabel(event.audience)}
+                    {formatDateTime(calendarEvent.startAt)} -{" "}
+                    {formatDateTime(calendarEvent.endAt)}
+                  </p>
+
+                  <p className="muted">
+                    {calendarEvent.materiaNombre || "General"} ·{" "}
+                    {audienceLabel(calendarEvent.audience)}
                   </p>
                 </div>
 
                 <div className="right">
-                  <span className={`badge ${eventTone(event.type)}`}>
-                    {eventTypeLabel(event.type)}
+                  <span className={`badge ${eventTone(calendarEvent.type)}`}>
+                    {eventTypeLabel(calendarEvent.type)}
                   </span>
 
                   <span className="badge">
-                    {audienceLabel(event.audience)}
+                    {audienceLabel(calendarEvent.audience)}
                   </span>
 
                   {canManage && (
                     <button
                       type="button"
                       className="btn-del"
-                      onClick={() => deleteEvent(event)}
+                      onClick={() => deleteEvent(calendarEvent)}
+                      disabled={loading || saving}
                     >
                       Eliminar
                     </button>
@@ -599,7 +754,9 @@ export default function Calendario() {
 
             {!eventosFiltrados.length && (
               <p className="msg">
-                {loading ? "Cargando calendario..." : "No hay eventos que coincidan con los filtros."}
+                {loading
+                  ? "Cargando calendario..."
+                  : "No hay eventos que coincidan con los filtros."}
               </p>
             )}
           </div>

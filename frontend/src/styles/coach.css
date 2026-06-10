@@ -1,239 +1,270 @@
+/* Archivo: frontend/src/styles/coach.css */
+
+/* =========================
+   GRID GENERAL
+   ========================= */
+
 .coachGrid {
   display: grid;
   gap: 16px;
 }
+
 .coachRow {
   display: grid;
-  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
   gap: 12px;
   align-items: stretch;
 }
+
 /* =========================
    KPI CARDS
    ========================= */
+
 .kpi {
-  position: relative;
-  overflow: hidden;
   display: grid;
   gap: 8px;
-  min-height: 96px;
+  min-height: 100px;
   padding: 16px;
-  border-radius: 20px;
+  border-radius: 16px;
   border: 1px solid var(--border);
-  background:
-    radial-gradient(180px 120px at 90% 10%, rgba(15, 118, 110, 0.1), transparent 62%),
-    linear-gradient(180deg, #ffffff, #f8fafc);
+  background: var(--card-soft);
+  box-shadow: none;
 }
-.kpi::before {
-  content: "";
-  position: absolute;
-  width: 74px;
-  height: 74px;
-  right: -26px;
-  top: -26px;
-  border-radius: 999px;
-  background: rgba(30, 58, 138, 0.08);
-}
+
 .kpiTitle {
-  position: relative;
-  z-index: 1;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 1000;
+  font-weight: 760;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.045em;
 }
+
 .kpiValue {
-  position: relative;
-  z-index: 1;
-  color: var(--brand-dark);
-  font-size: 34px;
-  font-weight: 1000;
+  color: var(--text);
+  font-size: clamp(26px, 3vw, 34px);
+  font-weight: 880;
   line-height: 1;
-  letter-spacing: -0.07em;
+  letter-spacing: -0.045em;
 }
+
 /* =========================
    PROGRESS
    ========================= */
+
 .progress {
-  height: 13px;
+  height: 12px;
   overflow: hidden;
   border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  background: #e2e8f0;
+  border: 1px solid var(--border);
+  background: rgba(148, 163, 184, 0.18);
 }
-.progress > div {
+
+.progress > div,
+.progressFill {
+  width: var(--progress, 0%);
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--brand), var(--brand2), var(--accent));
-  box-shadow: 0 0 24px rgba(15, 118, 110, 0.26);
+  background: linear-gradient(90deg, var(--brand), var(--brand2));
 }
+
 /* =========================
    PLAN
    ========================= */
+
 .plan {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   margin-top: 12px;
 }
+
 .planItem {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
-  padding: 15px;
-  border-radius: 20px;
+  padding: 14px;
+  border-radius: 16px;
   border: 1px solid var(--border);
-  background:
-    linear-gradient(180deg, #ffffff, #f8fafc);
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  background: var(--card-soft);
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    transform 0.16s ease;
 }
+
 .planItem:hover {
-  transform: translateY(-2px);
-  border-color: rgba(30, 58, 138, 0.22);
-  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.07);
+  transform: translateY(-1px);
+  border-color: rgba(30, 58, 138, 0.18);
+  background: var(--card);
 }
+
 .planLeft {
   display: grid;
   gap: 5px;
   min-width: 0;
 }
+
 .planMateria {
-  color: #0f172a;
+  color: var(--text);
   font-size: 15px;
-  font-weight: 1000;
+  font-weight: 820;
 }
+
 .planMeta {
   color: var(--brand2);
   font-size: 13px;
-  font-weight: 900;
+  font-weight: 720;
 }
+
 /* =========================
    TRAFFIC RISK
    ========================= */
+
 .traffic {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 9px;
-  min-height: 96px;
+  min-height: 100px;
   padding: 16px;
-  border-radius: 20px;
+  border-radius: 16px;
   border: 1px solid var(--border);
-  background: #ffffff;
+  background: var(--card-soft);
   font-size: 14px;
-  font-weight: 1000;
+  font-weight: 780;
   text-align: center;
 }
-.dot {
-  width: 11px;
-  height: 11px;
+
+.dot,
+.traffic .dot {
+  width: 10px;
+  height: 10px;
   flex: 0 0 auto;
   border-radius: 999px;
-  box-shadow: 0 0 0 5px rgba(148, 163, 184, 0.14);
+  background: currentColor;
 }
+
 .traffic.low {
   color: #166534;
-  border-color: rgba(22, 163, 74, 0.2);
-  background:
-    radial-gradient(180px 120px at 90% 10%, rgba(22, 163, 74, 0.12), transparent 62%),
-    rgba(22, 163, 74, 0.07);
+  border-color: rgba(22, 163, 74, 0.22);
+  background: rgba(22, 163, 74, 0.075);
 }
-.traffic.low .dot {
-  background: #16a34a;
-  box-shadow: 0 0 0 5px rgba(22, 163, 74, 0.13);
-}
+
 .traffic.med {
   color: #92400e;
-  border-color: rgba(245, 158, 11, 0.24);
-  background:
-    radial-gradient(180px 120px at 90% 10%, rgba(245, 158, 11, 0.16), transparent 62%),
-    rgba(245, 158, 11, 0.09);
+  border-color: rgba(245, 158, 11, 0.25);
+  background: rgba(245, 158, 11, 0.095);
 }
-.traffic.med .dot {
-  background: #f59e0b;
-  box-shadow: 0 0 0 5px rgba(245, 158, 11, 0.14);
-}
+
 .traffic.high {
   color: #991b1b;
   border-color: rgba(220, 38, 38, 0.22);
-  background:
-    radial-gradient(180px 120px at 90% 10%, rgba(220, 38, 38, 0.14), transparent 62%),
-    rgba(220, 38, 38, 0.08);
+  background: rgba(220, 38, 38, 0.075);
 }
-.traffic.high .dot {
-  background: #dc2626;
-  box-shadow: 0 0 0 5px rgba(220, 38, 38, 0.13);
+
+/* =========================
+   ESPACIADOS / HELPERS
+   ========================= */
+
+.planSpacing {
+  margin-top: 16px;
 }
+
+.planSpacingSmall {
+  margin-top: 12px;
+}
+
+.planWrap {
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.metaLabel {
+  display: grid;
+  gap: 6px;
+}
+
+.metaInput {
+  width: 140px;
+}
+
+.metaActions {
+  align-self: end;
+  gap: 8px;
+}
+
+.textClamp {
+  min-width: 0;
+}
+
 /* =========================
    DARK MODE
    ========================= */
+
 html.dark .kpi,
 html.dark .planItem,
-html.dark .traffic {
-  background: rgba(255, 255, 255, 0.05);
+html.dark .traffic,
+html[data-theme="dark"] .kpi,
+html[data-theme="dark"] .planItem,
+html[data-theme="dark"] .traffic {
+  background: var(--card-soft);
   border-color: var(--border);
 }
-html.dark .kpi {
-  background:
-    radial-gradient(180px 120px at 90% 10%, rgba(20, 184, 166, 0.1), transparent 62%),
-    rgba(255, 255, 255, 0.05);
-}
+
 html.dark .kpiValue,
-html.dark .planMateria {
-  color: #f8fafc;
+html.dark .planMateria,
+html[data-theme="dark"] .kpiValue,
+html[data-theme="dark"] .planMateria {
+  color: var(--text);
 }
-html.dark .progress {
-  background: rgba(148, 163, 184, 0.18);
-  border-color: rgba(148, 163, 184, 0.18);
+
+html.dark .progress,
+html[data-theme="dark"] .progress {
+  background: rgba(148, 163, 184, 0.16);
+  border-color: var(--border);
 }
-html.dark .planItem:hover {
-  border-color: rgba(96, 165, 250, 0.28);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.24);
+
+html.dark .planItem:hover,
+html[data-theme="dark"] .planItem:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(147, 197, 253, 0.22);
 }
-html.dark .planMeta {
+
+html.dark .planMeta,
+html[data-theme="dark"] .planMeta {
   color: #5eead4;
 }
+
 /* =========================
    RESPONSIVE
    ========================= */
+
 @media (max-width: 980px) {
   .coachRow {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
 @media (max-width: 640px) {
   .coachRow {
     grid-template-columns: 1fr;
   }
+
   .traffic {
     min-height: auto;
     justify-content: flex-start;
     text-align: left;
   }
+
   .planItem {
     flex-direction: column;
   }
+
   .planItem .badge {
     width: fit-content;
   }
+
+  .metaInput {
+    width: 100%;
+  }
 }
-.planSpacing{ margin-top:16px; }
-.planSpacingSmall{ margin-top:12px; }
-.planWrap{
-  gap:12px;
-  flex-wrap:wrap;
-}
-.progressFill{
-  width:var(--progress);
-}
-.metaLabel{
-  display:grid;
-  gap:6px;
-}
-.metaInput{ width:140px; }
-.metaActions{
-  align-self:end;
-  gap:8px;
-}
-.textClamp{ min-width:0; }
