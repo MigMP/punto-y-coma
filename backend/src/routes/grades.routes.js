@@ -291,6 +291,9 @@ router.post(
         });
       }
 
+      const calificacion = gradeResult.value;
+      const now = new Date().toISOString();
+
       const calificacionExistente = findExistingGrade(
         calificaciones,
         alumno.email,
@@ -298,14 +301,51 @@ router.post(
       );
 
       if (calificacionExistente) {
-        return res.status(409).json({
-          error:
-            "Ese alumno ya tiene una calificación registrada para esta materia. Usa editar en lugar de crear otra.",
+        const actualizada = {
+          ...calificacionExistente,
+          alumnoEmail: normalizeEmail(alumno.email),
+          alumnoNombre: normalizeText(alumno.name),
+          alumnoGrupo: normalizeText(alumno.grupo || ""),
+          alumnoBoleta: String(alumno.boleta || "").trim(),
+          materiaId,
+          calificacion,
+          updatedAt: now,
+          updatedBy: req.user.email,
+        };
+
+        await saveDocument("calificaciones", actualizada);
+
+        await createActivity(req, {
+          type: "calificacion_actualizada",
+          title: "Calificación actualizada",
+          description: `Se actualizó ${calificacion} en ${materia.nombre} para ${alumno.name}.`,
+          entity: "calificacion",
+          entityId: actualizada.id,
+        });
+
+        await notifyUser(alumno.email, {
+          type: "calificacion_actualizada",
+          title: "Calificación actualizada",
+          message: `Se actualizó tu calificación en ${materia.nombre} a ${calificacion}.`,
+          entity: "calificacion",
+          entityId: actualizada.id,
+        });
+
+        await notifyAdmins({
+          type: "calificacion_actualizada",
+          title: "Calificación actualizada",
+          message: `${
+            req.user.name || req.user.email
+          } actualizó ${calificacion} en ${materia.nombre} para ${alumno.name}.`,
+          entity: "calificacion",
+          entityId: actualizada.id,
+        });
+
+        return res.json({
+          ok: true,
+          updated: withMateriaName(materias, actualizada),
         });
       }
-
-      const calificacion = gradeResult.value;
-      const now = new Date().toISOString();
 
       const nueva = {
         id: nextId(calificaciones),
