@@ -6,7 +6,6 @@ import NavBar from "../components/layout/NavBar.jsx";
 import { useAuth } from "../state/AuthContext.jsx";
 import { apiJSON } from "../services/api.js";
 import { useToast } from "../components/feedback/ToastProvider.jsx";
-import { useConfirm } from "../components/feedback/ConfirmProvider.jsx";
 
 import "../styles/dashboard.css";
 import "../styles/coach.css";
@@ -63,7 +62,6 @@ function formatDate(value) {
 
 export default function Admin() {
   const { showToast } = useToast();
-  const confirm = useConfirm();
   const { user, token: ctxToken } = useAuth();
 
   const token = useMemo(() => {
@@ -86,6 +84,8 @@ export default function Admin() {
   const [savingAsignacion, setSavingAsignacion] = useState(false);
   const [generatingCode, setGeneratingCode] = useState(false);
   const [cancelingCodeId, setCancelingCodeId] = useState("");
+  const [deletingMateriaId, setDeletingMateriaId] = useState("");
+  const [deletingAsignacionId, setDeletingAsignacionId] = useState("");
 
   useEffect(() => {
     document.body.classList.add("app-bg");
@@ -217,17 +217,9 @@ export default function Admin() {
   };
 
   const deleteMateria = async (materia) => {
-    const ok = await confirm({
-      title: "Eliminar materia",
-      message: `¿Seguro que quieres eliminar "${materia.nombre}"? También se eliminarán sus asignaciones y calificaciones relacionadas.`,
-      confirmText: "Eliminar",
-      cancelText: "Cancelar",
-      tone: "danger",
-    });
-
-    if (!ok) return;
-
     try {
+      setDeletingMateriaId(String(materia.id));
+
       await apiJSON(`/materias/${materia.id}`, {
         token,
         method: "DELETE",
@@ -246,6 +238,8 @@ export default function Admin() {
         title: "No se eliminó",
         message: error.message || "Intenta nuevamente.",
       });
+    } finally {
+      setDeletingMateriaId("");
     }
   };
 
@@ -292,19 +286,9 @@ export default function Admin() {
   };
 
   const deleteAsignacion = async (asignacion) => {
-    const ok = await confirm({
-      title: "Quitar asignación",
-      message: `Se quitará ${asignacion.materiaNombre} del maestro ${
-        asignacion.maestroNombre || asignacion.maestroEmail
-      }.`,
-      confirmText: "Quitar",
-      cancelText: "Cancelar",
-      tone: "warning",
-    });
-
-    if (!ok) return;
-
     try {
+      setDeletingAsignacionId(String(asignacion.id));
+
       await apiJSON(`/asignaciones/${asignacion.id}`, {
         token,
         method: "DELETE",
@@ -323,6 +307,8 @@ export default function Admin() {
         title: "Error",
         message: error.message || "Intenta nuevamente.",
       });
+    } finally {
+      setDeletingAsignacionId("");
     }
   };
 
@@ -357,31 +343,31 @@ export default function Admin() {
   };
 
   const cancelTeacherCode = async (codeItem) => {
-  try {
-    setCancelingCodeId(String(codeItem.id));
+    try {
+      setCancelingCodeId(String(codeItem.id));
 
-    await apiJSON(`/teacher-codes/${codeItem.id}`, {
-      token,
-      method: "DELETE",
-    });
+      await apiJSON(`/teacher-codes/${codeItem.id}`, {
+        token,
+        method: "DELETE",
+      });
 
-    showToast({
-      type: "success",
-      title: "Código cancelado",
-      message: codeItem.code,
-    });
+      showToast({
+        type: "success",
+        title: "Código cancelado",
+        message: codeItem.code,
+      });
 
-    await loadAdminData();
-  } catch (error) {
-    showToast({
-      type: "error",
-      title: "No se pudo cancelar",
-      message: error.message || "Intenta nuevamente.",
-    });
-  } finally {
-    setCancelingCodeId("");
-  }
-};
+      await loadAdminData();
+    } catch (error) {
+      showToast({
+        type: "error",
+        title: "No se pudo cancelar",
+        message: error.message || "Intenta nuevamente.",
+      });
+    } finally {
+      setCancelingCodeId("");
+    }
+  };
 
   const copyTeacherCode = async (code) => {
     try {
@@ -424,7 +410,9 @@ export default function Admin() {
               savingMateria ||
               savingAsignacion ||
               generatingCode ||
-              Boolean(cancelingCodeId)
+              Boolean(cancelingCodeId) ||
+              Boolean(deletingMateriaId) ||
+              Boolean(deletingAsignacionId)
             }
           >
             {loading ? "Cargando..." : "Actualizar"}
@@ -516,11 +504,7 @@ export default function Admin() {
                   </div>
 
                   <div className="right">
-                    <span
-                      className={`badge ${
-                        codeItem.used ? "warn" : "ok"
-                      }`}
-                    >
+                    <span className={`badge ${codeItem.used ? "warn" : "ok"}`}>
                       {codeItem.used ? "No disponible" : "Disponible"}
                     </span>
 
@@ -591,9 +575,15 @@ export default function Admin() {
                   type="button"
                   className="btn-del"
                   onClick={() => deleteMateria(materia)}
-                  disabled={savingMateria || savingAsignacion}
+                  disabled={
+                    savingMateria ||
+                    savingAsignacion ||
+                    deletingMateriaId === String(materia.id)
+                  }
                 >
-                  Eliminar
+                  {deletingMateriaId === String(materia.id)
+                    ? "Eliminando..."
+                    : "Eliminar"}
                 </button>
               </div>
             ))}
@@ -697,9 +687,15 @@ export default function Admin() {
                   className="btn-del"
                   type="button"
                   onClick={() => deleteAsignacion(asignacion)}
-                  disabled={savingMateria || savingAsignacion}
+                  disabled={
+                    savingMateria ||
+                    savingAsignacion ||
+                    deletingAsignacionId === String(asignacion.id)
+                  }
                 >
-                  Quitar
+                  {deletingAsignacionId === String(asignacion.id)
+                    ? "Quitando..."
+                    : "Quitar"}
                 </button>
               </div>
             ))}

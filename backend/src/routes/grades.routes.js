@@ -23,6 +23,10 @@ function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
 }
 
+function normalizeText(value) {
+  return String(value || "").trim().replace(/\s+/g, " ");
+}
+
 function parsePositiveId(value) {
   const id = Number(value);
 
@@ -124,6 +128,8 @@ function withMateriaName(materias, calificacion) {
   return {
     ...calificacion,
     materiaNombre: materia?.nombre || "(materia no encontrada)",
+    alumnoGrupo: calificacion.alumnoGrupo || "",
+    alumnoBoleta: calificacion.alumnoBoleta || "",
   };
 }
 
@@ -206,7 +212,8 @@ router.get("/calificaciones", auth, async (req, res) => {
       const alumnoEmail = normalizeEmail(req.user.email);
 
       items = items.filter(
-        (calificacion) => normalizeEmail(calificacion.alumnoEmail) === alumnoEmail
+        (calificacion) =>
+          normalizeEmail(calificacion.alumnoEmail) === alumnoEmail
       );
     }
 
@@ -227,286 +234,321 @@ router.get("/calificaciones", auth, async (req, res) => {
   }
 });
 
-router.post("/calificaciones", auth, requireRole(ROLES.MAESTRO), async (req, res) => {
-  try {
-    const [calificaciones, users, materias, asignaciones] = await Promise.all([
-      getCollection("calificaciones"),
-      getCollection("users"),
-      getCollection("materias"),
-      getCollection("asignaciones"),
-    ]);
+router.post(
+  "/calificaciones",
+  auth,
+  requireRole(ROLES.MAESTRO),
+  async (req, res) => {
+    try {
+      const [calificaciones, users, materias, asignaciones] = await Promise.all([
+        getCollection("calificaciones"),
+        getCollection("users"),
+        getCollection("materias"),
+        getCollection("asignaciones"),
+      ]);
 
-    const alumnoEmail = normalizeEmail(req.body.alumnoEmail);
-    const materiaId = parsePositiveId(req.body.materiaId);
-    const gradeResult = parseGrade(req.body.calificacion);
+      const alumnoEmail = normalizeEmail(req.body.alumnoEmail);
+      const materiaId = parsePositiveId(req.body.materiaId);
+      const gradeResult = parseGrade(req.body.calificacion);
 
-    if (!alumnoEmail || !EMAIL_RE.test(alumnoEmail)) {
-      return res.status(400).json({
-        error: "Correo del alumno inválido",
+      if (!alumnoEmail || !EMAIL_RE.test(alumnoEmail)) {
+        return res.status(400).json({
+          error: "Correo del alumno inválido",
+        });
+      }
+
+      const alumno = findAlumno(users, alumnoEmail);
+
+      if (!alumno) {
+        return res.status(404).json({
+          error: "No existe un alumno activo registrado con ese correo",
+        });
+      }
+
+      if (!materiaId) {
+        return res.status(400).json({
+          error: "materiaId inválido",
+        });
+      }
+
+      const materia = findMateria(materias, materiaId);
+
+      if (!materia) {
+        return res.status(404).json({
+          error: "Materia no encontrada",
+        });
+      }
+
+      if (!isMaestroAsignadoA(asignaciones, materiaId, req.user.email)) {
+        return res.status(403).json({
+          error: "No estás asignado a esa materia",
+        });
+      }
+
+      if (!gradeResult.ok) {
+        return res.status(400).json({
+          error: gradeResult.error,
+        });
+      }
+
+      const calificacionExistente = findExistingGrade(
+        calificaciones,
+        alumno.email,
+        materiaId
+      );
+
+      if (calificacionExistente) {
+        return res.status(409).json({
+          error:
+            "Ese alumno ya tiene una calificación registrada para esta materia. Usa editar en lugar de crear otra.",
+        });
+      }
+
+      const calificacion = gradeResult.value;
+      const now = new Date().toISOString();
+
+      const nueva = {
+        id: nextId(calificaciones),
+        alumnoEmail: normalizeEmail(alumno.email),
+        alumnoNombre: normalizeText(alumno.name),
+        alumnoGrupo: normalizeText(alumno.grupo || ""),
+        alumnoBoleta: String(alumno.boleta || "").trim(),
+        materiaId,
+        calificacion,
+        creadoPor: req.user.email,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await saveDocument("calificaciones", nueva);
+
+      await createActivity(req, {
+        type: "calificacion_creada",
+        title: "Calificación registrada",
+        description: `Se registró ${calificacion} en ${materia.nombre} para ${alumno.name}.`,
+        entity: "calificacion",
+        entityId: nueva.id,
+      });
+
+      await notifyUser(alumno.email, {
+        type: "calificacion_creada",
+        title: "Nueva calificación registrada",
+        message: `Se registró ${calificacion} en ${materia.nombre}.`,
+        entity: "calificacion",
+        entityId: nueva.id,
+      });
+
+      await notifyAdmins({
+        type: "calificacion_creada",
+        title: "Calificación registrada",
+        message: `${
+          req.user.name || req.user.email
+        } registró ${calificacion} en ${materia.nombre} para ${alumno.name}.`,
+        entity: "calificacion",
+        entityId: nueva.id,
+      });
+
+      return res.status(201).json(withMateriaName(materias, nueva));
+    } catch (error) {
+      return res.status(500).json({
+        error: "No se pudo registrar la calificación",
+        detalle: error.message,
       });
     }
-
-    const alumno = findAlumno(users, alumnoEmail);
-
-    if (!alumno) {
-      return res.status(404).json({
-        error: "No existe un alumno activo registrado con ese correo",
-      });
-    }
-
-    if (!materiaId) {
-      return res.status(400).json({
-        error: "materiaId inválido",
-      });
-    }
-
-    const materia = findMateria(materias, materiaId);
-
-    if (!materia) {
-      return res.status(404).json({
-        error: "Materia no encontrada",
-      });
-    }
-
-    if (!isMaestroAsignadoA(asignaciones, materiaId, req.user.email)) {
-      return res.status(403).json({
-        error: "No estás asignado a esa materia",
-      });
-    }
-
-    if (!gradeResult.ok) {
-      return res.status(400).json({
-        error: gradeResult.error,
-      });
-    }
-
-    const calificacionExistente = findExistingGrade(
-      calificaciones,
-      alumno.email,
-      materiaId
-    );
-
-    if (calificacionExistente) {
-      return res.status(409).json({
-        error:
-          "Ese alumno ya tiene una calificación registrada para esta materia. Usa editar en lugar de crear otra.",
-      });
-    }
-
-    const calificacion = gradeResult.value;
-    const now = new Date().toISOString();
-
-    const nueva = {
-      id: nextId(calificaciones),
-      alumnoEmail: alumno.email,
-      alumnoNombre: alumno.name,
-      materiaId,
-      calificacion,
-      creadoPor: req.user.email,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    await saveDocument("calificaciones", nueva);
-
-    await createActivity(req, {
-      type: "calificacion_creada",
-      title: "Calificación registrada",
-      description: `Se registró ${calificacion} en ${materia.nombre} para ${alumno.name}.`,
-      entity: "calificacion",
-      entityId: nueva.id,
-    });
-
-    await notifyUser(alumno.email, {
-      type: "calificacion_creada",
-      title: "Nueva calificación registrada",
-      message: `Se registró ${calificacion} en ${materia.nombre}.`,
-      entity: "calificacion",
-      entityId: nueva.id,
-    });
-
-    await notifyAdmins({
-      type: "calificacion_creada",
-      title: "Calificación registrada",
-      message: `${req.user.name || req.user.email} registró ${calificacion} en ${materia.nombre} para ${alumno.name}.`,
-      entity: "calificacion",
-      entityId: nueva.id,
-    });
-
-    return res.status(201).json(withMateriaName(materias, nueva));
-  } catch (error) {
-    return res.status(500).json({
-      error: "No se pudo registrar la calificación",
-      detalle: error.message,
-    });
   }
-});
+);
 
-router.patch("/calificaciones/:id", auth, requireRole(ROLES.MAESTRO), async (req, res) => {
-  try {
-    const id = parsePositiveId(req.params.id);
+router.patch(
+  "/calificaciones/:id",
+  auth,
+  requireRole(ROLES.MAESTRO),
+  async (req, res) => {
+    try {
+      const id = parsePositiveId(req.params.id);
 
-    if (!id) {
-      return res.status(400).json({
-        error: "ID inválido",
+      if (!id) {
+        return res.status(400).json({
+          error: "ID inválido",
+        });
+      }
+
+      const [calificaciones, materias, asignaciones] = await Promise.all([
+        getCollection("calificaciones"),
+        getCollection("materias"),
+        getCollection("asignaciones"),
+      ]);
+
+      const current = calificaciones.find(
+        (calificacion) => Number(calificacion.id) === id
+      );
+
+      if (!current) {
+        return res.status(404).json({
+          error: "Calificación no encontrada",
+        });
+      }
+
+      if (!canTeacherManageGrade(asignaciones, current, req.user.email)) {
+        return res.status(403).json({
+          error: "No estás asignado a esa materia",
+        });
+      }
+
+      const gradeResult = parseGrade(req.body.calificacion);
+
+      if (!gradeResult.ok) {
+        return res.status(400).json({
+          error: gradeResult.error,
+        });
+      }
+
+      const calificacion = gradeResult.value;
+      const materia = findMateria(materias, current.materiaId);
+      const anterior = current.calificacion;
+
+      if (Number(anterior) === Number(calificacion)) {
+        return res.status(400).json({
+          error: "La nueva calificación es igual a la anterior",
+        });
+      }
+
+      const updated = {
+        ...current,
+        calificacion,
+        updatedAt: new Date().toISOString(),
+        updatedBy: req.user.email,
+      };
+
+      await saveDocument("calificaciones", updated);
+
+      await createActivity(req, {
+        type: "calificacion_editada",
+        title: "Calificación actualizada",
+        description: `Se actualizó la calificación de ${
+          current.alumnoNombre
+        } en ${materia?.nombre || "materia"} de ${anterior} a ${calificacion}.`,
+        entity: "calificacion",
+        entityId: current.id,
+      });
+
+      await notifyUser(current.alumnoEmail, {
+        type: "calificacion_editada",
+        title: "Calificación actualizada",
+        message: `Tu calificación en ${
+          materia?.nombre || "materia"
+        } cambió de ${anterior} a ${calificacion}.`,
+        entity: "calificacion",
+        entityId: current.id,
+      });
+
+      await notifyAdmins({
+        type: "calificacion_editada",
+        title: "Calificación actualizada",
+        message: `${
+          req.user.name || req.user.email
+        } actualizó la calificación de ${current.alumnoNombre} en ${
+          materia?.nombre || "materia"
+        }.`,
+        entity: "calificacion",
+        entityId: current.id,
+      });
+
+      return res.json({
+        ok: true,
+        updated: withMateriaName(materias, updated),
+      });
+    } catch (error) {
+      return res.status(500).json({
+        error: "No se pudo actualizar la calificación",
+        detalle: error.message,
       });
     }
-
-    const [calificaciones, materias, asignaciones] = await Promise.all([
-      getCollection("calificaciones"),
-      getCollection("materias"),
-      getCollection("asignaciones"),
-    ]);
-
-    const current = calificaciones.find(
-      (calificacion) => Number(calificacion.id) === id
-    );
-
-    if (!current) {
-      return res.status(404).json({
-        error: "Calificación no encontrada",
-      });
-    }
-
-    if (!canTeacherManageGrade(asignaciones, current, req.user.email)) {
-      return res.status(403).json({
-        error: "No estás asignado a esa materia",
-      });
-    }
-
-    const gradeResult = parseGrade(req.body.calificacion);
-
-    if (!gradeResult.ok) {
-      return res.status(400).json({
-        error: gradeResult.error,
-      });
-    }
-
-    const calificacion = gradeResult.value;
-    const materia = findMateria(materias, current.materiaId);
-    const anterior = current.calificacion;
-
-    if (Number(anterior) === Number(calificacion)) {
-      return res.status(400).json({
-        error: "La nueva calificación es igual a la anterior",
-      });
-    }
-
-    const updated = {
-      ...current,
-      calificacion,
-      updatedAt: new Date().toISOString(),
-      updatedBy: req.user.email,
-    };
-
-    await saveDocument("calificaciones", updated);
-
-    await createActivity(req, {
-      type: "calificacion_editada",
-      title: "Calificación actualizada",
-      description: `Se actualizó la calificación de ${current.alumnoNombre} en ${materia?.nombre || "materia"} de ${anterior} a ${calificacion}.`,
-      entity: "calificacion",
-      entityId: current.id,
-    });
-
-    await notifyUser(current.alumnoEmail, {
-      type: "calificacion_editada",
-      title: "Calificación actualizada",
-      message: `Tu calificación en ${materia?.nombre || "materia"} cambió de ${anterior} a ${calificacion}.`,
-      entity: "calificacion",
-      entityId: current.id,
-    });
-
-    await notifyAdmins({
-      type: "calificacion_editada",
-      title: "Calificación actualizada",
-      message: `${req.user.name || req.user.email} actualizó la calificación de ${current.alumnoNombre} en ${materia?.nombre || "materia"}.`,
-      entity: "calificacion",
-      entityId: current.id,
-    });
-
-    return res.json({
-      ok: true,
-      updated: withMateriaName(materias, updated),
-    });
-  } catch (error) {
-    return res.status(500).json({
-      error: "No se pudo actualizar la calificación",
-      detalle: error.message,
-    });
   }
-});
+);
 
-router.delete("/calificaciones/:id", auth, requireRole(ROLES.MAESTRO), async (req, res) => {
-  try {
-    const id = parsePositiveId(req.params.id);
+router.delete(
+  "/calificaciones/:id",
+  auth,
+  requireRole(ROLES.MAESTRO),
+  async (req, res) => {
+    try {
+      const id = parsePositiveId(req.params.id);
 
-    if (!id) {
-      return res.status(400).json({
-        error: "ID inválido",
+      if (!id) {
+        return res.status(400).json({
+          error: "ID inválido",
+        });
+      }
+
+      const [calificaciones, materias, asignaciones] = await Promise.all([
+        getCollection("calificaciones"),
+        getCollection("materias"),
+        getCollection("asignaciones"),
+      ]);
+
+      const deleted = calificaciones.find(
+        (calificacion) => Number(calificacion.id) === id
+      );
+
+      if (!deleted) {
+        return res.status(404).json({
+          error: "Calificación no encontrada",
+        });
+      }
+
+      if (!canTeacherManageGrade(asignaciones, deleted, req.user.email)) {
+        return res.status(403).json({
+          error: "No estás asignado a esa materia",
+        });
+      }
+
+      const materia = findMateria(materias, deleted.materiaId);
+
+      await deleteDocument("calificaciones", id);
+
+      await createActivity(req, {
+        type: "calificacion_eliminada",
+        title: "Calificación eliminada",
+        description: `Se eliminó la calificación ${deleted.calificacion} de ${
+          deleted.alumnoNombre
+        } en ${materia?.nombre || "materia"}.`,
+        entity: "calificacion",
+        entityId: deleted.id,
+      });
+
+      await notifyUser(deleted.alumnoEmail, {
+        type: "calificacion_eliminada",
+        title: "Calificación eliminada",
+        message: `Se eliminó una calificación de ${
+          materia?.nombre || "materia"
+        }.`,
+        entity: "calificacion",
+        entityId: deleted.id,
+      });
+
+      await notifyAdmins({
+        type: "calificacion_eliminada",
+        title: "Calificación eliminada",
+        message: `${
+          req.user.name || req.user.email
+        } eliminó una calificación de ${deleted.alumnoNombre} en ${
+          materia?.nombre || "materia"
+        }.`,
+        entity: "calificacion",
+        entityId: deleted.id,
+      });
+
+      return res.json({
+        ok: true,
+        deleted: withMateriaName(materias, deleted),
+      });
+    } catch (error) {
+      return res.status(500).json({
+        error: "No se pudo eliminar la calificación",
+        detalle: error.message,
       });
     }
-
-    const [calificaciones, materias, asignaciones] = await Promise.all([
-      getCollection("calificaciones"),
-      getCollection("materias"),
-      getCollection("asignaciones"),
-    ]);
-
-    const deleted = calificaciones.find(
-      (calificacion) => Number(calificacion.id) === id
-    );
-
-    if (!deleted) {
-      return res.status(404).json({
-        error: "Calificación no encontrada",
-      });
-    }
-
-    if (!canTeacherManageGrade(asignaciones, deleted, req.user.email)) {
-      return res.status(403).json({
-        error: "No estás asignado a esa materia",
-      });
-    }
-
-    const materia = findMateria(materias, deleted.materiaId);
-
-    await deleteDocument("calificaciones", id);
-
-    await createActivity(req, {
-      type: "calificacion_eliminada",
-      title: "Calificación eliminada",
-      description: `Se eliminó la calificación ${deleted.calificacion} de ${deleted.alumnoNombre} en ${materia?.nombre || "materia"}.`,
-      entity: "calificacion",
-      entityId: deleted.id,
-    });
-
-    await notifyUser(deleted.alumnoEmail, {
-      type: "calificacion_eliminada",
-      title: "Calificación eliminada",
-      message: `Se eliminó una calificación de ${materia?.nombre || "materia"}.`,
-      entity: "calificacion",
-      entityId: deleted.id,
-    });
-
-    await notifyAdmins({
-      type: "calificacion_eliminada",
-      title: "Calificación eliminada",
-      message: `${req.user.name || req.user.email} eliminó una calificación de ${deleted.alumnoNombre} en ${materia?.nombre || "materia"}.`,
-      entity: "calificacion",
-      entityId: deleted.id,
-    });
-
-    return res.json({
-      ok: true,
-      deleted: withMateriaName(materias, deleted),
-    });
-  } catch (error) {
-    return res.status(500).json({
-      error: "No se pudo eliminar la calificación",
-      detalle: error.message,
-    });
   }
-});
+);
 
 module.exports = router;
