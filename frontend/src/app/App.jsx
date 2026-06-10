@@ -10,6 +10,7 @@ import Dashboard from "../pages/Dashboard.jsx";
 import Profile from "../pages/Profile.jsx";
 import Ajustes from "../pages/Ajustes.jsx";
 import Plan from "../pages/Plan.jsx";
+import Horario from "../pages/Horario.jsx";
 import Capturar from "../pages/Capturar.jsx";
 import Admin from "../pages/Admin.jsx";
 import Reportes from "../pages/Reportes.jsx";
@@ -131,6 +132,15 @@ export default function App() {
         element={
           <ProtectedPage allowedRoles={["alumno"]}>
             <Plan />
+          </ProtectedPage>
+        }
+      />
+
+      <Route
+        path="/horario"
+        element={
+          <ProtectedPage allowedRoles={["alumno"]}>
+            <Horario />
           </ProtectedPage>
         }
       />

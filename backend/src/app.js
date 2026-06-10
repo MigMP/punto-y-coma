@@ -21,6 +21,7 @@ const resourcesRoutes = require("./routes/resources.routes");
 const analyticsRoutes = require("./routes/analytics.routes");
 const teacherCodesRoutes = require("./routes/teacher-codes.routes");
 const reportsRoutes = require("./routes/reports.routes");
+const scheduleRoutes = require("./routes/schedule.routes");
 
 const app = express();
 
@@ -95,6 +96,7 @@ app.use("/api", resourcesRoutes);
 app.use("/api", analyticsRoutes);
 app.use("/api", teacherCodesRoutes);
 app.use("/api", reportsRoutes);
+app.use("/api", scheduleRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

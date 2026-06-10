@@ -106,6 +106,7 @@ export default function NavBar() {
   const canSeeMainTools = hasRole(role, ALL_ROLES);
   const canSeeAcademicTracking = hasRole(role, STAFF_ROLES);
   const canSeeAdminTools = role === "administrador";
+  const canSeeSchedule = role === "alumno";
 
   const initials = useMemo(() => {
     const cleanName = String(displayUser || "").trim();
@@ -262,6 +263,17 @@ export default function NavBar() {
             </NavLink>
           )}
 
+          {canSeeSchedule && (
+            <NavLink
+              to="/horario"
+              className={({ isActive }) =>
+                isActive ? "navLink active" : "navLink"
+              }
+            >
+              Horario
+            </NavLink>
+          )}
+
           {canSeeMainTools && (
             <NavLink
               to="/calendario"
@@ -372,6 +384,12 @@ export default function NavBar() {
                   Ajustes
                 </Link>
 
+                {canSeeSchedule && (
+                  <Link to="/horario" onClick={closeMenu}>
+                    Horario escolar
+                  </Link>
+                )}
+
                 {canSeeAcademicTracking && (
                   <Link to="/alumnos" onClick={closeMenu}>
                     Alumnos
@@ -387,12 +405,6 @@ export default function NavBar() {
                 {canSeeAdminTools && (
                   <Link to="/actividad" onClick={closeMenu}>
                     Actividad
-                  </Link>
-                )}
-
-                {canSeeAdminTools && (
-                  <Link to="/configuracion" onClick={closeMenu}>
-                    Configuración
                   </Link>
                 )}
 
