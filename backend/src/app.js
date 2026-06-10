@@ -20,6 +20,7 @@ const calendarRoutes = require("./routes/calendar.routes");
 const resourcesRoutes = require("./routes/resources.routes");
 const analyticsRoutes = require("./routes/analytics.routes");
 const teacherCodesRoutes = require("./routes/teacher-codes.routes");
+const reportsRoutes = require("./routes/reports.routes");
 
 const app = express();
 
@@ -93,6 +94,7 @@ app.use("/api", calendarRoutes);
 app.use("/api", resourcesRoutes);
 app.use("/api", analyticsRoutes);
 app.use("/api", teacherCodesRoutes);
+app.use("/api", reportsRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

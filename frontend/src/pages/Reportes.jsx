@@ -8,6 +8,43 @@ import { useToast } from "../components/feedback/ToastProvider.jsx";
 import "../styles/dashboard.css";
 import "../styles/coach.css";
 
+const TYPES = [
+  { value: "contenido", label: "Contenido incorrecto" },
+  { value: "calificacion", label: "Calificación incorrecta" },
+  { value: "tarea", label: "Problema con tarea" },
+  { value: "calendario", label: "Evento de calendario" },
+  { value: "recurso", label: "Recurso o enlace" },
+  { value: "cuenta", label: "Problema de cuenta" },
+  { value: "error_tecnico", label: "Error técnico" },
+  { value: "otro", label: "Otro" },
+];
+
+const MODULES = [
+  { value: "general", label: "General" },
+  { value: "calificaciones", label: "Calificaciones" },
+  { value: "tareas", label: "Tareas" },
+  { value: "calendario", label: "Calendario" },
+  { value: "recursos", label: "Recursos" },
+  { value: "cuenta", label: "Cuenta / perfil" },
+  { value: "analiticas", label: "Analíticas" },
+  { value: "reportes", label: "Reportes" },
+  { value: "otro", label: "Otro" },
+];
+
+const PRIORITIES = [
+  { value: "baja", label: "Baja" },
+  { value: "media", label: "Media" },
+  { value: "alta", label: "Alta" },
+];
+
+const STATUS = [
+  { value: "all", label: "Todos" },
+  { value: "pendiente", label: "Pendiente" },
+  { value: "revision", label: "En revisión" },
+  { value: "resuelto", label: "Resuelto" },
+  { value: "rechazado", label: "Rechazado" },
+];
+
 function toArray(data) {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.items)) return data.items;
@@ -17,50 +54,21 @@ function toArray(data) {
   return [];
 }
 
-function fmt(value) {
-  if (value === null || value === undefined || value === "") {
-    return "—";
-  }
-
-  const n = Number(value);
-  return Number.isFinite(n) ? n.toFixed(2) : "—";
-}
-
-function gradeClass(value) {
-  if (value === null || value === undefined || value === "") {
-    return "";
-  }
-
-  const n = Number(value);
-
-  if (!Number.isFinite(n)) return "";
-  if (n < 6) return "bad";
-  if (n < 8) return "warn";
-
-  return "ok";
-}
-
-function statusText(value) {
-  const n = Number(value);
-
-  if (!Number.isFinite(n)) return "Sin datos";
-  if (n < 6) return "Riesgo alto";
-  if (n < 8) return "En observación";
-
-  return "Estable";
-}
-
 function getUserName(user) {
   return user?.nombre || user?.name || user?.email || "Usuario";
 }
 
+function labelFrom(list, value, fallback = "Sin dato") {
+  return list.find((item) => item.value === value)?.label || fallback;
+}
+
 function formatDate(value) {
-  if (!value) return "";
+  if (!value) return "Sin fecha";
 
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return "";
+    return "Sin fecha";
   }
 
   return new Intl.DateTimeFormat("es-MX", {
@@ -69,26 +77,47 @@ function formatDate(value) {
   }).format(date);
 }
 
-function csvEscape(value) {
-  const text = String(value ?? "").replace(/"/g, '""');
-  return `"${text}"`;
+function priorityTone(value) {
+  if (value === "alta") return "bad";
+  if (value === "media") return "warn";
+
+  return "ok";
 }
 
-function downloadCSV(filename, rows) {
-  const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\n");
-  const blob = new Blob(["\ufeff" + csv], {
-    type: "text/csv;charset=utf-8;",
-  });
+function statusTone(value) {
+  if (value === "pendiente") return "warn";
+  if (value === "revision") return "";
+  if (value === "resuelto") return "ok";
+  if (value === "rechazado") return "bad";
 
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
+  return "";
+}
 
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+function normalizeText(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function validateForm(form) {
+  const title = String(form.title || "").trim();
+  const description = String(form.description || "").trim();
+
+  if (title.length < 4) {
+    return "El asunto debe tener mínimo 4 caracteres.";
+  }
+
+  if (title.length > 120) {
+    return "El asunto no puede pasar de 120 caracteres.";
+  }
+
+  if (description.length < 10) {
+    return "La descripción debe tener mínimo 10 caracteres.";
+  }
+
+  if (description.length > 1500) {
+    return "La descripción no puede pasar de 1500 caracteres.";
+  }
+
+  return "";
 }
 
 export default function Reportes() {
@@ -99,10 +128,27 @@ export default function Reportes() {
     return ctxToken || localStorage.getItem("token") || "";
   }, [ctxToken]);
 
-  const [materias, setMaterias] = useState([]);
-  const [calificaciones, setCalificaciones] = useState([]);
-  const [filtroMateria, setFiltroMateria] = useState("ALL");
+  const isAdmin = user?.role === "administrador";
+
+  const [reportes, setReportes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [query, setQuery] = useState("");
+
+  const [updatingId, setUpdatingId] = useState(null);
+  const [resolutionMessages, setResolutionMessages] = useState({});
+
+  const [form, setForm] = useState({
+    type: "contenido",
+    module: "general",
+    priority: "media",
+    title: "",
+    description: "",
+  });
 
   useEffect(() => {
     document.body.classList.add("app-bg");
@@ -114,8 +160,7 @@ export default function Reportes() {
 
   const loadReportes = useCallback(async () => {
     if (!token) {
-      setMaterias([]);
-      setCalificaciones([]);
+      setReportes([]);
       setLoading(false);
       return;
     }
@@ -123,13 +168,20 @@ export default function Reportes() {
     try {
       setLoading(true);
 
-      const [materiasData, calificacionesData] = await Promise.all([
-        apiJSON("/materias", { token }),
-        apiJSON("/calificaciones", { token }),
-      ]);
+      const params = new URLSearchParams();
 
-      setMaterias(toArray(materiasData));
-      setCalificaciones(toArray(calificacionesData));
+      if (statusFilter !== "all") params.set("status", statusFilter);
+      if (typeFilter !== "all") params.set("type", typeFilter);
+      if (priorityFilter !== "all") params.set("priority", priorityFilter);
+      if (query.trim()) params.set("search", query.trim());
+
+      const path = params.toString()
+        ? `/reportes?${params.toString()}`
+        : "/reportes";
+
+      const data = await apiJSON(path, { token });
+
+      setReportes(toArray(data));
     } catch (error) {
       showToast({
         type: "error",
@@ -139,165 +191,171 @@ export default function Reportes() {
     } finally {
       setLoading(false);
     }
-  }, [token, showToast]);
+  }, [token, statusFilter, typeFilter, priorityFilter, query, showToast]);
 
   useEffect(() => {
     loadReportes();
   }, [loadReportes]);
 
-  const calificacionesFiltradas = useMemo(() => {
-    if (filtroMateria === "ALL") return calificaciones;
-
-    return calificaciones.filter(
-      (item) => String(item.materiaId) === String(filtroMateria)
-    );
-  }, [calificaciones, filtroMateria]);
-
-  const materiaStats = useMemo(() => {
-    const map = new Map();
-
-    for (const item of calificacionesFiltradas) {
-      const materiaId = String(item.materiaId || "");
-      const calificacion = Number(item.calificacion);
-
-      if (!materiaId || !Number.isFinite(calificacion)) continue;
-
-      const materiaNombre =
-        item.materiaNombre ||
-        materias.find((materia) => String(materia.id) === materiaId)?.nombre ||
-        "Materia";
-
-      if (!map.has(materiaId)) {
-        map.set(materiaId, {
-          materiaId,
-          materia: materiaNombre,
-          valores: [],
-          alumnos: new Set(),
-        });
-      }
-
-      map.get(materiaId).valores.push(calificacion);
-
-      const alumnoEmail = String(item.alumnoEmail || "").toLowerCase();
-
-      if (alumnoEmail) {
-        map.get(materiaId).alumnos.add(alumnoEmail);
-      }
-    }
-
-    return [...map.values()]
-      .map((item) => {
-        const promedio =
-          item.valores.reduce((acc, value) => acc + value, 0) /
-          item.valores.length;
-        const min = Math.min(...item.valores);
-        const max = Math.max(...item.valores);
-
-        return {
-          materiaId: item.materiaId,
-          materia: item.materia,
-          promedio,
-          min,
-          max,
-          registros: item.valores.length,
-          alumnos: item.alumnos.size,
-        };
-      })
-      .sort((a, b) => a.promedio - b.promedio);
-  }, [calificacionesFiltradas, materias]);
-
-  const alumnosStats = useMemo(() => {
-    const map = new Map();
-
-    for (const item of calificacionesFiltradas) {
-      const email = String(item.alumnoEmail || "").toLowerCase();
-      const calificacion = Number(item.calificacion);
-
-      if (!email || !Number.isFinite(calificacion)) continue;
-
-      if (!map.has(email)) {
-        map.set(email, {
-          email,
-          nombre: item.alumnoNombre || email,
-          valores: [],
-          materias: new Set(),
-        });
-      }
-
-      map.get(email).valores.push(calificacion);
-      map
-        .get(email)
-        .materias.add(String(item.materiaNombre || item.materiaId || "Materia"));
-    }
-
-    return [...map.values()]
-      .map((item) => {
-        const promedio =
-          item.valores.reduce((acc, value) => acc + value, 0) /
-          item.valores.length;
-
-        return {
-          email: item.email,
-          nombre: item.nombre,
-          promedio,
-          registros: item.valores.length,
-          materias: item.materias.size,
-        };
-      })
-      .sort((a, b) => a.promedio - b.promedio);
-  }, [calificacionesFiltradas]);
-
   const resumen = useMemo(() => {
-    const valores = calificacionesFiltradas
-      .map((item) => Number(item.calificacion))
-      .filter(Number.isFinite);
-
-    const promedio = valores.length
-      ? valores.reduce((a, b) => a + b, 0) / valores.length
-      : null;
-
-    const reprobadas = valores.filter((value) => value < 6).length;
-    const riesgo = valores.filter((value) => value >= 6 && value < 8).length;
-    const estables = valores.filter((value) => value >= 8).length;
-
     return {
-      promedio,
-      registros: valores.length,
-      reprobadas,
-      riesgo,
-      estables,
-      alumnos: alumnosStats.length,
-      materias: materiaStats.length,
+      total: reportes.length,
+      pendientes: reportes.filter((item) => item.status === "pendiente").length,
+      revision: reportes.filter((item) => item.status === "revision").length,
+      resueltos: reportes.filter((item) => item.status === "resuelto").length,
+      alta: reportes.filter((item) => item.priority === "alta").length,
     };
-  }, [calificacionesFiltradas, alumnosStats.length, materiaStats.length]);
+  }, [reportes]);
 
-  const copyReport = async () => {
-    const lines = [
-      "Reporte académico - Punto y Coma",
-      "",
-      `Usuario: ${getUserName(user)}`,
-      `Promedio general: ${fmt(resumen.promedio)}`,
-      `Registros analizados: ${resumen.registros}`,
-      `Alumnos evaluados: ${resumen.alumnos}`,
-      `Materias analizadas: ${resumen.materias}`,
-      `En riesgo alto: ${resumen.reprobadas}`,
-      "",
-      "Promedio por materia:",
-      ...materiaStats.map(
-        (item) =>
-          `- ${item.materia}: ${fmt(item.promedio)} (${statusText(
-            item.promedio
-          )})`
-      ),
-    ];
+  const filteredReportes = useMemo(() => {
+    const term = normalizeText(query);
+
+    if (!term) return reportes;
+
+    return reportes.filter((item) => {
+      const searchable = [
+        item.title,
+        item.description,
+        item.type,
+        item.module,
+        item.priority,
+        item.status,
+        item.creadoPorEmail,
+        item.creadoPorNombre,
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+      return normalizeText(searchable).includes(term);
+    });
+  }, [reportes, query]);
+
+  const handleFormChange = (event) => {
+    const { name, value } = event.target;
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const createReport = async (event) => {
+    event.preventDefault();
+
+    const error = validateForm(form);
+
+    if (error) {
+      showToast({
+        type: "warning",
+        title: "Revisa el reporte",
+        message: error,
+      });
+      return;
+    }
 
     try {
-      await navigator.clipboard.writeText(lines.join("\n"));
+      setSaving(true);
+
+      await apiJSON("/reportes", {
+        token,
+        method: "POST",
+        body: {
+          type: form.type,
+          module: form.module,
+          priority: form.priority,
+          title: form.title.trim(),
+          description: form.description.trim(),
+        },
+      });
+
+      setForm({
+        type: "contenido",
+        module: "general",
+        priority: "media",
+        title: "",
+        description: "",
+      });
+
+      showToast({
+        type: "success",
+        title: "Reporte enviado",
+        message: "El administrador recibirá una notificación.",
+      });
+
+      await loadReportes();
+    } catch (error) {
+      showToast({
+        type: "error",
+        title: "No se pudo enviar",
+        message: error.message || "Intenta nuevamente.",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateReportStatus = async (report, nextStatus) => {
+    if (!isAdmin) return;
+
+    try {
+      setUpdatingId(report.id);
+
+      const message =
+        resolutionMessages[report.id] || report.resolutionMessage || "";
+
+      await apiJSON(`/reportes/${report.id}/status`, {
+        token,
+        method: "PATCH",
+        body: {
+          status: nextStatus,
+          resolutionMessage: message,
+        },
+      });
+
+      showToast({
+        type: "success",
+        title: "Reporte actualizado",
+        message: `Estado: ${labelFrom(STATUS, nextStatus, nextStatus)}`,
+      });
+
+      await loadReportes();
+    } catch (error) {
+      showToast({
+        type: "error",
+        title: "No se actualizó",
+        message: error.message || "Intenta nuevamente.",
+      });
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const copyReport = async (report) => {
+    const text = [
+      "Reporte de plataforma - Punto y Coma",
+      "",
+      `Asunto: ${report.title}`,
+      `Tipo: ${labelFrom(TYPES, report.type)}`,
+      `Módulo: ${labelFrom(MODULES, report.module)}`,
+      `Prioridad: ${labelFrom(PRIORITIES, report.priority)}`,
+      `Estado: ${labelFrom(STATUS, report.status, report.status)}`,
+      `Enviado por: ${report.creadoPorNombre || report.creadoPorEmail}`,
+      `Fecha: ${formatDate(report.createdAt)}`,
+      "",
+      "Descripción:",
+      report.description,
+      "",
+      "Respuesta / resolución:",
+      report.resolutionMessage || "Sin respuesta todavía.",
+    ].join("\n");
+
+    try {
+      await navigator.clipboard.writeText(text);
 
       showToast({
         type: "success",
         title: "Reporte copiado",
-        message: "El resumen fue copiado al portapapeles.",
+        message: "La información fue copiada al portapapeles.",
       });
     } catch {
       showToast({
@@ -308,99 +366,6 @@ export default function Reportes() {
     }
   };
 
-  const exportSummaryCSV = () => {
-    if (!resumen.registros) {
-      showToast({
-        type: "info",
-        title: "Sin datos",
-        message: "No hay datos suficientes para exportar el resumen.",
-      });
-      return;
-    }
-
-    const rows = [
-      ["Tipo", "Indicador", "Valor"],
-      ["Resumen", "Promedio general", fmt(resumen.promedio)],
-      ["Resumen", "Registros analizados", resumen.registros],
-      ["Resumen", "Alumnos evaluados", resumen.alumnos],
-      ["Resumen", "Materias analizadas", resumen.materias],
-      ["Resumen", "Riesgo alto", resumen.reprobadas],
-      ["Resumen", "En observación", resumen.riesgo],
-      ["Resumen", "Estables", resumen.estables],
-      [],
-      [
-        "Materia",
-        "Promedio",
-        "Estado",
-        "Registros",
-        "Alumnos",
-        "Mínimo",
-        "Máximo",
-      ],
-      ...materiaStats.map((item) => [
-        item.materia,
-        fmt(item.promedio),
-        statusText(item.promedio),
-        item.registros,
-        item.alumnos,
-        fmt(item.min),
-        fmt(item.max),
-      ]),
-    ];
-
-    downloadCSV("reporte-academico-punto-y-coma.csv", rows);
-
-    showToast({
-      type: "success",
-      title: "CSV generado",
-      message: "El reporte fue descargado correctamente.",
-    });
-  };
-
-  const exportGradesCSV = () => {
-    if (!calificacionesFiltradas.length) {
-      showToast({
-        type: "info",
-        title: "Sin calificaciones",
-        message: "No hay calificaciones para exportar.",
-      });
-      return;
-    }
-
-    const rows = [
-      [
-        "Alumno",
-        "Correo",
-        "Materia",
-        "Calificación",
-        "Estado",
-        "Fecha creación",
-        "Última actualización",
-      ],
-      ...calificacionesFiltradas.map((item) => [
-        item.alumnoNombre || "",
-        item.alumnoEmail || "",
-        item.materiaNombre || item.materiaId || "",
-        fmt(item.calificacion),
-        statusText(item.calificacion),
-        formatDate(item.createdAt),
-        formatDate(item.updatedAt),
-      ]),
-    ];
-
-    downloadCSV("calificaciones-punto-y-coma.csv", rows);
-
-    showToast({
-      type: "success",
-      title: "CSV generado",
-      message: "Las calificaciones fueron descargadas correctamente.",
-    });
-  };
-
-  const printReport = () => {
-    window.print();
-  };
-
   return (
     <>
       <NavBar />
@@ -408,11 +373,12 @@ export default function Reportes() {
       <main className="container">
         <section className="card row-between">
           <div>
-            <h1>Reportes académicos</h1>
+            <h1>Reportes de la plataforma</h1>
 
             <p className="msg">
-              {getUserName(user)} · Análisis general de rendimiento, materias y
-              alumnos.
+              {getUserName(user)} · Reporta contenido incorrecto, errores de la
+              app o problemas académicos para que el administrador les dé
+              seguimiento.
             </p>
           </div>
 
@@ -420,187 +386,297 @@ export default function Reportes() {
             type="button"
             className="btn-ghost"
             onClick={loadReportes}
-            disabled={loading}
+            disabled={loading || saving}
           >
             {loading ? "Cargando..." : "Actualizar"}
           </button>
         </section>
 
         <section className="card">
-          <h2>Filtros del reporte</h2>
+          <h2>Nuevo reporte</h2>
 
-          <div className="row planWrap">
-            <label className="metaLabel">
-              <span className="muted">Materia</span>
+          <p className="msg">
+            Describe el problema con claridad. El administrador recibirá una
+            notificación y podrá cambiar el estado del reporte.
+          </p>
 
+          <form className="gridX planSpacingSmall" onSubmit={createReport}>
+            <label>
+              Tipo
               <select
-                value={filtroMateria}
-                onChange={(event) => setFiltroMateria(event.target.value)}
-                disabled={loading}
+                name="type"
+                value={form.type}
+                onChange={handleFormChange}
+                disabled={loading || saving}
               >
-                <option value="ALL">Todas las materias</option>
-
-                {materias.map((materia) => (
-                  <option key={materia.id} value={materia.id}>
-                    {materia.nombre}
+                {TYPES.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
                   </option>
                 ))}
               </select>
             </label>
 
-            <div className="row metaActions">
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={copyReport}
-                disabled={loading || !resumen.registros}
+            <label>
+              Módulo afectado
+              <select
+                name="module"
+                value={form.module}
+                onChange={handleFormChange}
+                disabled={loading || saving}
               >
-                Copiar reporte
-              </button>
+                {MODULES.map((module) => (
+                  <option key={module.value} value={module.value}>
+                    {module.label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={exportSummaryCSV}
-                disabled={loading || !resumen.registros}
+            <label>
+              Prioridad
+              <select
+                name="priority"
+                value={form.priority}
+                onChange={handleFormChange}
+                disabled={loading || saving}
               >
-                Exportar resumen CSV
-              </button>
+                {PRIORITIES.map((priority) => (
+                  <option key={priority.value} value={priority.value}>
+                    {priority.label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={exportGradesCSV}
-                disabled={loading || !calificacionesFiltradas.length}
-              >
-                Exportar calificaciones CSV
-              </button>
+            <label>
+              Asunto
+              <input
+                name="title"
+                value={form.title}
+                onChange={handleFormChange}
+                placeholder="Ej. La calificación aparece incorrecta"
+                disabled={loading || saving}
+              />
+            </label>
 
-              <button type="button" onClick={printReport}>
-                Imprimir
+            <label>
+              Descripción
+              <textarea
+                name="description"
+                value={form.description}
+                onChange={handleFormChange}
+                placeholder="Explica qué pasó, dónde ocurrió y qué esperabas ver."
+                disabled={loading || saving}
+                rows={4}
+              />
+            </label>
+
+            <div className="metaActions">
+              <button type="submit" disabled={loading || saving}>
+                {saving ? "Enviando..." : "Enviar reporte"}
               </button>
             </div>
-          </div>
+          </form>
         </section>
 
         <section className="card">
-          <h2>Resumen general</h2>
+          <h2>{isAdmin ? "Reportes recibidos" : "Mis reportes enviados"}</h2>
 
           <div className="coachRow">
             <div className="kpi">
-              <div className="kpiTitle">Promedio</div>
-
-              <div className="kpiValue">
-                {loading ? "..." : fmt(resumen.promedio)}
-              </div>
+              <div className="kpiTitle">Total</div>
+              <div className="kpiValue">{resumen.total}</div>
             </div>
 
             <div className="kpi">
-              <div className="kpiTitle">Registros</div>
-              <div className="kpiValue">{resumen.registros}</div>
+              <div className="kpiTitle">Pendientes</div>
+              <div className="kpiValue">{resumen.pendientes}</div>
             </div>
 
             <div className="kpi">
-              <div className="kpiTitle">Alumnos</div>
-              <div className="kpiValue">{resumen.alumnos}</div>
+              <div className="kpiTitle">En revisión</div>
+              <div className="kpiValue">{resumen.revision}</div>
             </div>
 
             <div className="kpi">
-              <div className="kpiTitle">Materias</div>
-              <div className="kpiValue">{resumen.materias}</div>
+              <div className="kpiTitle">Resueltos</div>
+              <div className="kpiValue">{resumen.resueltos}</div>
+            </div>
+
+            <div className="kpi">
+              <div className="kpiTitle">Prioridad alta</div>
+              <div className="kpiValue">{resumen.alta}</div>
             </div>
           </div>
-        </section>
 
-        <section className="card">
-          <h2>Distribución de rendimiento</h2>
+          <div className="gridX planSpacingSmall">
+            <label>
+              Buscar
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Asunto, descripción, usuario o estado"
+                disabled={loading}
+              />
+            </label>
 
-          <div className="lista">
-            <div className="item">
-              <div>
-                <strong>Riesgo alto</strong>
-                <p className="muted">Calificaciones menores a 6.</p>
-              </div>
+            <label>
+              Estado
+              <select
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value)}
+                disabled={loading}
+              >
+                {STATUS.map((status) => (
+                  <option key={status.value} value={status.value}>
+                    {status.label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-              <span className="badge bad">{resumen.reprobadas}</span>
-            </div>
+            <label>
+              Tipo
+              <select
+                value={typeFilter}
+                onChange={(event) => setTypeFilter(event.target.value)}
+                disabled={loading}
+              >
+                <option value="all">Todos</option>
 
-            <div className="item">
-              <div>
-                <strong>En observación</strong>
-                <p className="muted">Calificaciones desde 6 hasta menos de 8.</p>
-              </div>
+                {TYPES.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-              <span className="badge warn">{resumen.riesgo}</span>
-            </div>
+            <label>
+              Prioridad
+              <select
+                value={priorityFilter}
+                onChange={(event) => setPriorityFilter(event.target.value)}
+                disabled={loading}
+              >
+                <option value="all">Todas</option>
 
-            <div className="item">
-              <div>
-                <strong>Rendimiento estable</strong>
-                <p className="muted">Calificaciones iguales o superiores a 8.</p>
-              </div>
-
-              <span className="badge ok">{resumen.estables}</span>
-            </div>
+                {PRIORITIES.map((priority) => (
+                  <option key={priority.value} value={priority.value}>
+                    {priority.label}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
-        </section>
 
-        <section className="card">
-          <h2>Promedio por materia</h2>
-
-          <div className="lista">
-            {materiaStats.map((materia) => (
-              <div className="item" key={materia.materiaId}>
+          <div className="lista planSpacingSmall">
+            {filteredReportes.map((report) => (
+              <div className="item" key={report.id}>
                 <div className="textClamp">
-                  <strong>{materia.materia}</strong>
+                  <strong>{report.title}</strong>
 
                   <p className="muted">
-                    {materia.registros} registro(s) · {materia.alumnos}{" "}
-                    alumno(s) · mínimo {fmt(materia.min)} · máximo{" "}
-                    {fmt(materia.max)}
+                    {labelFrom(TYPES, report.type)} ·{" "}
+                    {labelFrom(MODULES, report.module)} ·{" "}
+                    {formatDate(report.createdAt)}
                   </p>
+
+                  <p className="muted">{report.description}</p>
+
+                  {isAdmin && (
+                    <p className="muted">
+                      Enviado por: {report.creadoPorNombre || "Usuario"} ·{" "}
+                      {report.creadoPorEmail}
+                    </p>
+                  )}
+
+                  {report.resolutionMessage && (
+                    <p className="muted">
+                      Respuesta: {report.resolutionMessage}
+                    </p>
+                  )}
+
+                  {isAdmin && (
+                    <div className="gridX planSpacingSmall">
+                      <label>
+                        Respuesta del administrador
+                        <input
+                          value={
+                            resolutionMessages[report.id] ??
+                            report.resolutionMessage ??
+                            ""
+                          }
+                          onChange={(event) =>
+                            setResolutionMessages((prev) => ({
+                              ...prev,
+                              [report.id]: event.target.value,
+                            }))
+                          }
+                          placeholder="Ej. Se revisó y ya quedó corregido."
+                          disabled={updatingId === report.id}
+                        />
+                      </label>
+                    </div>
+                  )}
                 </div>
 
-                <span className={`badge ${gradeClass(materia.promedio)}`}>
-                  {fmt(materia.promedio)}
-                </span>
+                <div className="right">
+                  <span className={`badge ${priorityTone(report.priority)}`}>
+                    {labelFrom(PRIORITIES, report.priority)}
+                  </span>
+
+                  <span className={`badge ${statusTone(report.status)}`}>
+                    {labelFrom(STATUS, report.status, report.status)}
+                  </span>
+
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={() => copyReport(report)}
+                  >
+                    Copiar
+                  </button>
+
+                  {isAdmin && (
+                    <>
+                      <button
+                        type="button"
+                        className="btn-ghost"
+                        onClick={() => updateReportStatus(report, "revision")}
+                        disabled={updatingId === report.id}
+                      >
+                        Revisar
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => updateReportStatus(report, "resuelto")}
+                        disabled={updatingId === report.id}
+                      >
+                        Resolver
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn-del"
+                        onClick={() => updateReportStatus(report, "rechazado")}
+                        disabled={updatingId === report.id}
+                      >
+                        Rechazar
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             ))}
 
-            {!materiaStats.length && (
+            {!filteredReportes.length && (
               <p className="msg">
                 {loading
-                  ? "Cargando reporte..."
-                  : "No hay datos suficientes para mostrar materias."}
-              </p>
-            )}
-          </div>
-        </section>
-
-        <section className="card">
-          <h2>Alumnos con mayor prioridad</h2>
-
-          <div className="lista">
-            {alumnosStats.slice(0, 8).map((alumno) => (
-              <div className="item" key={alumno.email}>
-                <div className="textClamp">
-                  <strong>{alumno.nombre}</strong>
-
-                  <p className="muted">
-                    {alumno.email} · {alumno.registros} registro(s) ·{" "}
-                    {alumno.materias} materia(s)
-                  </p>
-                </div>
-
-                <span className={`badge ${gradeClass(alumno.promedio)}`}>
-                  {fmt(alumno.promedio)}
-                </span>
-              </div>
-            ))}
-
-            {!alumnosStats.length && (
-              <p className="msg">
-                {loading ? "Cargando alumnos..." : "No hay alumnos para analizar."}
+                  ? "Cargando reportes..."
+                  : "No hay reportes que coincidan con los filtros."}
               </p>
             )}
           </div>

@@ -1,5 +1,9 @@
-/* Archivo: frontend/src/styles/toast.css */
-/* FEEDBACK / TOASTS LIMPIOS */
+/* Archivo: frontend/src/styles/feedback.css */
+/* FEEDBACK / TOASTS / CONFIRMACIONES */
+
+/* =========================
+   TOASTS LIMPIOS
+   ========================= */
 
 .toastViewport {
   position: fixed;
@@ -116,7 +120,146 @@
   background: #3b82f6;
 }
 
-/* Dark mode */
+/* =========================
+   MODAL DE CONFIRMACIÓN
+   ========================= */
+
+.confirmOverlay {
+  position: fixed !important;
+  inset: 0 !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+
+  width: 100vw !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+
+  z-index: 2147483647 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  padding: 24px !important;
+  margin: 0 !important;
+
+  background: rgba(15, 23, 42, 0.62) !important;
+  backdrop-filter: blur(8px) !important;
+
+  transform: none !important;
+  animation: confirmFadeIn 0.16s ease-out;
+}
+
+.confirmDialog {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+
+  width: min(470px, calc(100vw - 32px)) !important;
+  max-width: 470px !important;
+  max-height: calc(100vh - 48px) !important;
+
+  margin: 0 auto !important;
+  padding: 28px !important;
+
+  display: block !important;
+
+  background: #ffffff !important;
+  color: #111827 !important;
+
+  border: 1px solid rgba(148, 163, 184, 0.35) !important;
+  border-radius: 28px !important;
+
+  box-shadow: 0 30px 100px rgba(15, 23, 42, 0.35) !important;
+  overflow: auto !important;
+
+  transform: none !important;
+  animation: confirmPop 0.2s ease-out;
+}
+
+.confirmMark {
+  display: block !important;
+  width: 56px !important;
+  height: 8px !important;
+  border-radius: 999px !important;
+  margin: 0 0 18px 0 !important;
+  background: linear-gradient(90deg, #2563eb, #06b6d4) !important;
+}
+
+.confirm-danger {
+  background: linear-gradient(90deg, #dc2626, #fb7185) !important;
+}
+
+.confirm-warning {
+  background: linear-gradient(90deg, #d97706, #f59e0b) !important;
+}
+
+.confirm-info {
+  background: linear-gradient(90deg, #2563eb, #06b6d4) !important;
+}
+
+.confirm-success {
+  background: linear-gradient(90deg, #16a34a, #22c55e) !important;
+}
+
+.confirmBody {
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.confirmBody h2 {
+  margin: 0 0 10px 0 !important;
+  color: #111827 !important;
+  font-size: 1.55rem !important;
+  line-height: 1.15 !important;
+  font-weight: 1000 !important;
+  letter-spacing: -0.03em !important;
+}
+
+.confirmBody p {
+  margin: 0 !important;
+  color: #64748b !important;
+  font-size: 1rem !important;
+  font-weight: 750 !important;
+  line-height: 1.55 !important;
+}
+
+.confirmActions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 12px !important;
+  margin-top: 24px !important;
+  flex-wrap: wrap !important;
+}
+
+.confirmActions button {
+  min-width: 118px !important;
+  min-height: 46px !important;
+  border-radius: 999px !important;
+  font-weight: 1000 !important;
+  cursor: pointer !important;
+}
+
+.confirmActions .btn-ghost {
+  border: 1px solid rgba(37, 99, 235, 0.22) !important;
+  background: #eef2ff !important;
+  color: #1e40af !important;
+}
+
+.confirmActions .btn-del {
+  border: 1px solid rgba(153, 27, 27, 0.18) !important;
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+}
+
+/* =========================
+   DARK MODE
+   ========================= */
 
 html.dark .toast,
 html[data-theme="dark"] .toast,
@@ -159,7 +302,58 @@ body.dark .toastClose:hover {
   background: rgba(255, 255, 255, 0.08);
 }
 
-/* Animación */
+html.dark .confirmOverlay,
+html[data-theme="dark"] .confirmOverlay,
+body.theme-dark .confirmOverlay,
+body.dark .confirmOverlay {
+  background: rgba(2, 6, 23, 0.72) !important;
+}
+
+html.dark .confirmDialog,
+html[data-theme="dark"] .confirmDialog,
+body.theme-dark .confirmDialog,
+body.dark .confirmDialog {
+  background: #0f172a !important;
+  color: #f8fafc !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.5) !important;
+}
+
+html.dark .confirmBody h2,
+html[data-theme="dark"] .confirmBody h2,
+body.theme-dark .confirmBody h2,
+body.dark .confirmBody h2 {
+  color: #f8fafc !important;
+}
+
+html.dark .confirmBody p,
+html[data-theme="dark"] .confirmBody p,
+body.theme-dark .confirmBody p,
+body.dark .confirmBody p {
+  color: #cbd5e1 !important;
+}
+
+html.dark .confirmActions .btn-ghost,
+html[data-theme="dark"] .confirmActions .btn-ghost,
+body.theme-dark .confirmActions .btn-ghost,
+body.dark .confirmActions .btn-ghost {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #bfdbfe !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+html.dark .confirmActions .btn-del,
+html[data-theme="dark"] .confirmActions .btn-del,
+body.theme-dark .confirmActions .btn-del,
+body.dark .confirmActions .btn-del {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #fecaca !important;
+  border-color: rgba(239, 68, 68, 0.26) !important;
+}
+
+/* =========================
+   ANIMACIONES
+   ========================= */
 
 @keyframes toastIn {
   from {
@@ -173,7 +367,31 @@ body.dark .toastClose:hover {
   }
 }
 
-/* Responsive */
+@keyframes confirmFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes confirmPop {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* =========================
+   RESPONSIVE
+   ========================= */
 
 @media (max-width: 640px) {
   .toastViewport {
@@ -192,5 +410,25 @@ body.dark .toastClose:hover {
   .toastClose {
     width: 30px;
     height: 30px;
+  }
+
+  .confirmOverlay {
+    align-items: center !important;
+    padding: 16px !important;
+  }
+
+  .confirmDialog {
+    width: calc(100vw - 32px) !important;
+    padding: 22px !important;
+    border-radius: 24px !important;
+  }
+
+  .confirmActions {
+    flex-direction: column-reverse !important;
+    align-items: stretch !important;
+  }
+
+  .confirmActions button {
+    width: 100% !important;
   }
 }
