@@ -12,6 +12,14 @@ import { useToast } from "../components/feedback/ToastProvider.jsx";
 import "../styles/dashboard.css";
 import "../styles/coach.css";
 
+const PERIODOS = [
+  "Primer parcial",
+  "Segundo parcial",
+  "Tercer parcial",
+  "Final",
+  "Extraordinario",
+];
+
 function toArray(data) {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.items)) return data.items;
@@ -109,11 +117,13 @@ export default function Capturar() {
     materiaId: "",
     grupo: "",
     alumnoEmail: "",
+    periodo: "Primer parcial",
     calificacion: "",
   });
 
   const [filtroMateria, setFiltroMateria] = useState("ALL");
   const [filtroGrupo, setFiltroGrupo] = useState("ALL");
+  const [filtroPeriodo, setFiltroPeriodo] = useState("ALL");
   const [orden, setOrden] = useState("DESC");
 
   const [editId, setEditId] = useState(null);
@@ -212,6 +222,12 @@ export default function Capturar() {
       );
     }
 
+    if (filtroPeriodo !== "ALL") {
+      data = data.filter(
+        (item) => normalizeText(item.periodo || "Final") === normalizeText(filtroPeriodo)
+      );
+    }
+
     data.sort((a, b) => {
       const gradeA = Number(a.calificacion);
       const gradeB = Number(b.calificacion);
@@ -220,7 +236,7 @@ export default function Capturar() {
     });
 
     return data;
-  }, [calificaciones, filtroMateria, filtroGrupo, orden]);
+  }, [calificaciones, filtroMateria, filtroGrupo, filtroPeriodo, orden]);
 
   const alumnosEvaluados = useMemo(() => {
     return new Set(
@@ -265,8 +281,8 @@ export default function Capturar() {
   const validateForm = () => {
     const gradeError = validateGrade(form.calificacion);
 
-    if (!form.materiaId || !form.grupo || !form.alumnoEmail) {
-      return "Selecciona materia, grupo y alumno.";
+    if (!form.materiaId || !form.grupo || !form.alumnoEmail || !form.periodo) {
+      return "Selecciona materia, grupo, alumno y periodo.";
     }
 
     if (!alumnoSeleccionado) {
@@ -303,14 +319,15 @@ export default function Capturar() {
         body: {
           alumnoEmail: alumnoSeleccionado.email,
           materiaId: Number(form.materiaId),
+          periodo: form.periodo,
           calificacion: Number(form.calificacion),
         },
       });
 
       showToast({
         type: "success",
-        title: "Calificación registrada",
-        message: "El alumno fue actualizado correctamente.",
+        title: "Calificación guardada",
+        message: `${form.periodo} fue actualizado correctamente.`,
       });
 
       setForm((prev) => ({
@@ -421,8 +438,8 @@ export default function Capturar() {
             <h1>Gestión de calificaciones</h1>
 
             <p className="msg">
-              {getUserName(user)} · Control académico por materia, grupo y
-              alumno
+              {getUserName(user)} · Control académico por materia, grupo,
+              alumno y periodo
             </p>
           </div>
 
@@ -462,7 +479,6 @@ export default function Capturar() {
 
             <div className="kpi">
               <div className="kpiTitle">Promedio</div>
-
               <div className={`kpiValue ${gradeClass(promedioGeneral)}`}>
                 {fmtGrade(promedioGeneral)}
               </div>
@@ -479,8 +495,8 @@ export default function Capturar() {
           <h2>Capturar calificación</h2>
 
           <p className="msg">
-            Selecciona una materia, después el grupo y finalmente el alumno. El
-            sistema usará automáticamente su nombre, correo y boleta.
+            Selecciona materia, grupo, alumno y periodo. El sistema guardará una
+            calificación por alumno, materia y periodo.
           </p>
 
           <form className="gridX" onSubmit={addCalificacion}>
@@ -522,17 +538,29 @@ export default function Capturar() {
               Alumno
               <select
                 value={form.alumnoEmail}
-                onChange={(event) =>
-                  updateForm("alumnoEmail", event.target.value)
-                }
+                onChange={(event) => updateForm("alumnoEmail", event.target.value)}
                 disabled={!form.grupo || !alumnosDelGrupo.length || saving || loading}
               >
                 <option value="">Selecciona un alumno</option>
 
                 {alumnosDelGrupo.map((alumno) => (
                   <option key={alumno.email} value={alumno.email}>
-                    {alumno.name} · {alumno.boleta || "Sin boleta"} ·{" "}
-                    {alumno.email}
+                    {alumno.name} · {alumno.boleta || "Sin boleta"} · {alumno.email}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Periodo
+              <select
+                value={form.periodo}
+                onChange={(event) => updateForm("periodo", event.target.value)}
+                disabled={saving || loading}
+              >
+                {PERIODOS.map((periodo) => (
+                  <option key={periodo} value={periodo}>
+                    {periodo}
                   </option>
                 ))}
               </select>
@@ -547,9 +575,7 @@ export default function Capturar() {
                 step="0.01"
                 placeholder="Ej. 8.5"
                 value={form.calificacion}
-                onChange={(event) =>
-                  updateForm("calificacion", event.target.value)
-                }
+                onChange={(event) => updateForm("calificacion", event.target.value)}
                 disabled={saving || loading}
               />
             </label>
@@ -561,7 +587,8 @@ export default function Capturar() {
                 loading ||
                 !materias.length ||
                 !form.grupo ||
-                !form.alumnoEmail
+                !form.alumnoEmail ||
+                !form.periodo
               }
             >
               {saving ? "Guardando..." : "Guardar calificación"}
@@ -579,14 +606,14 @@ export default function Capturar() {
                 </p>
               </div>
 
-              <span className="badge ok">Alumno seleccionado</span>
+              <span className="badge ok">{form.periodo}</span>
             </div>
           )}
 
           {!alumnos.length && !loading && (
             <p className="msg">
-              No hay alumnos registrados. Primero debe existir al menos un alumno
-              con grupo y boleta.
+              No hay alumnos registrados. Primero debe existir al menos un
+              alumno con grupo y boleta.
             </p>
           )}
         </section>
@@ -630,6 +657,23 @@ export default function Capturar() {
             </label>
 
             <label>
+              Periodo
+              <select
+                value={filtroPeriodo}
+                onChange={(event) => setFiltroPeriodo(event.target.value)}
+                disabled={loading}
+              >
+                <option value="ALL">Todos los periodos</option>
+
+                {PERIODOS.map((periodo) => (
+                  <option key={periodo} value={periodo}>
+                    {periodo}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
               Orden
               <select
                 value={orden}
@@ -653,7 +697,8 @@ export default function Capturar() {
                   <strong>{calificacion.alumnoNombre}</strong>
 
                   <p className="muted">
-                    {calificacion.materiaNombre} · Grupo{" "}
+                    {calificacion.materiaNombre} ·{" "}
+                    {calificacion.periodo || "Final"} · Grupo{" "}
                     {calificacion.alumnoGrupo || "sin grupo"} · Boleta{" "}
                     {calificacion.alumnoBoleta || "sin boleta"} ·{" "}
                     {calificacion.alumnoEmail}
@@ -694,11 +739,7 @@ export default function Capturar() {
                     </>
                   ) : (
                     <>
-                      <span
-                        className={`badge ${gradeClass(
-                          calificacion.calificacion
-                        )}`}
-                      >
+                      <span className={`badge ${gradeClass(calificacion.calificacion)}`}>
                         {fmtGrade(calificacion.calificacion)}
                       </span>
 

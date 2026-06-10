@@ -19,12 +19,30 @@ const MIN_GRADE = 0;
 const MAX_GRADE = 10;
 const MAX_DECIMALS = 2;
 
+const PERIODOS_VALIDOS = [
+  "Primer parcial",
+  "Segundo parcial",
+  "Tercer parcial",
+  "Final",
+  "Extraordinario",
+];
+
 function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
 }
 
 function normalizeText(value) {
   return String(value || "").trim().replace(/\s+/g, " ");
+}
+
+function normalizePeriodo(value) {
+  const clean = normalizeText(value);
+
+  const found = PERIODOS_VALIDOS.find(
+    (periodo) => periodo.toLowerCase() === clean.toLowerCase()
+  );
+
+  return found || "";
 }
 
 function parsePositiveId(value) {
@@ -111,15 +129,21 @@ function findAlumno(users, email) {
   );
 }
 
-function findExistingGrade(calificaciones, alumnoEmail, materiaId) {
+function findExistingGrade(calificaciones, alumnoEmail, materiaId, periodo) {
   const email = normalizeEmail(alumnoEmail);
   const id = Number(materiaId);
+  const periodoNormalizado = normalizePeriodo(periodo);
 
-  return calificaciones.find(
-    (calificacion) =>
+  return calificaciones.find((calificacion) => {
+    const itemPeriodo =
+      normalizePeriodo(calificacion.periodo) || "Final";
+
+    return (
       normalizeEmail(calificacion.alumnoEmail) === email &&
-      Number(calificacion.materiaId) === id
-  );
+      Number(calificacion.materiaId) === id &&
+      itemPeriodo === periodoNormalizado
+    );
+  });
 }
 
 function withMateriaName(materias, calificacion) {
@@ -130,6 +154,7 @@ function withMateriaName(materias, calificacion) {
     materiaNombre: materia?.nombre || "(materia no encontrada)",
     alumnoGrupo: calificacion.alumnoGrupo || "",
     alumnoBoleta: calificacion.alumnoBoleta || "",
+    periodo: calificacion.periodo || "Final",
   };
 }
 
@@ -249,11 +274,18 @@ router.post(
 
       const alumnoEmail = normalizeEmail(req.body.alumnoEmail);
       const materiaId = parsePositiveId(req.body.materiaId);
+      const periodo = normalizePeriodo(req.body.periodo);
       const gradeResult = parseGrade(req.body.calificacion);
 
       if (!alumnoEmail || !EMAIL_RE.test(alumnoEmail)) {
         return res.status(400).json({
           error: "Correo del alumno inválido",
+        });
+      }
+
+      if (!periodo) {
+        return res.status(400).json({
+          error: "Periodo de evaluación inválido",
         });
       }
 
@@ -297,7 +329,8 @@ router.post(
       const calificacionExistente = findExistingGrade(
         calificaciones,
         alumno.email,
-        materiaId
+        materiaId,
+        periodo
       );
 
       if (calificacionExistente) {
@@ -308,6 +341,7 @@ router.post(
           alumnoGrupo: normalizeText(alumno.grupo || ""),
           alumnoBoleta: String(alumno.boleta || "").trim(),
           materiaId,
+          periodo,
           calificacion,
           updatedAt: now,
           updatedBy: req.user.email,
@@ -318,7 +352,7 @@ router.post(
         await createActivity(req, {
           type: "calificacion_actualizada",
           title: "Calificación actualizada",
-          description: `Se actualizó ${calificacion} en ${materia.nombre} para ${alumno.name}.`,
+          description: `Se actualizó ${calificacion} en ${materia.nombre} (${periodo}) para ${alumno.name}.`,
           entity: "calificacion",
           entityId: actualizada.id,
         });
@@ -326,7 +360,7 @@ router.post(
         await notifyUser(alumno.email, {
           type: "calificacion_actualizada",
           title: "Calificación actualizada",
-          message: `Se actualizó tu calificación en ${materia.nombre} a ${calificacion}.`,
+          message: `Se actualizó tu calificación en ${materia.nombre} (${periodo}) a ${calificacion}.`,
           entity: "calificacion",
           entityId: actualizada.id,
         });
@@ -336,7 +370,7 @@ router.post(
           title: "Calificación actualizada",
           message: `${
             req.user.name || req.user.email
-          } actualizó ${calificacion} en ${materia.nombre} para ${alumno.name}.`,
+          } actualizó ${calificacion} en ${materia.nombre} (${periodo}) para ${alumno.name}.`,
           entity: "calificacion",
           entityId: actualizada.id,
         });
@@ -354,6 +388,7 @@ router.post(
         alumnoGrupo: normalizeText(alumno.grupo || ""),
         alumnoBoleta: String(alumno.boleta || "").trim(),
         materiaId,
+        periodo,
         calificacion,
         creadoPor: req.user.email,
         createdAt: now,
@@ -365,7 +400,7 @@ router.post(
       await createActivity(req, {
         type: "calificacion_creada",
         title: "Calificación registrada",
-        description: `Se registró ${calificacion} en ${materia.nombre} para ${alumno.name}.`,
+        description: `Se registró ${calificacion} en ${materia.nombre} (${periodo}) para ${alumno.name}.`,
         entity: "calificacion",
         entityId: nueva.id,
       });
@@ -373,7 +408,7 @@ router.post(
       await notifyUser(alumno.email, {
         type: "calificacion_creada",
         title: "Nueva calificación registrada",
-        message: `Se registró ${calificacion} en ${materia.nombre}.`,
+        message: `Se registró ${calificacion} en ${materia.nombre} (${periodo}).`,
         entity: "calificacion",
         entityId: nueva.id,
       });
@@ -383,7 +418,7 @@ router.post(
         title: "Calificación registrada",
         message: `${
           req.user.name || req.user.email
-        } registró ${calificacion} en ${materia.nombre} para ${alumno.name}.`,
+        } registró ${calificacion} en ${materia.nombre} (${periodo}) para ${alumno.name}.`,
         entity: "calificacion",
         entityId: nueva.id,
       });
@@ -445,6 +480,7 @@ router.patch(
       const calificacion = gradeResult.value;
       const materia = findMateria(materias, current.materiaId);
       const anterior = current.calificacion;
+      const periodo = current.periodo || "Final";
 
       if (Number(anterior) === Number(calificacion)) {
         return res.status(400).json({
@@ -454,6 +490,7 @@ router.patch(
 
       const updated = {
         ...current,
+        periodo,
         calificacion,
         updatedAt: new Date().toISOString(),
         updatedBy: req.user.email,
@@ -466,7 +503,7 @@ router.patch(
         title: "Calificación actualizada",
         description: `Se actualizó la calificación de ${
           current.alumnoNombre
-        } en ${materia?.nombre || "materia"} de ${anterior} a ${calificacion}.`,
+        } en ${materia?.nombre || "materia"} (${periodo}) de ${anterior} a ${calificacion}.`,
         entity: "calificacion",
         entityId: current.id,
       });
@@ -476,7 +513,7 @@ router.patch(
         title: "Calificación actualizada",
         message: `Tu calificación en ${
           materia?.nombre || "materia"
-        } cambió de ${anterior} a ${calificacion}.`,
+        } (${periodo}) cambió de ${anterior} a ${calificacion}.`,
         entity: "calificacion",
         entityId: current.id,
       });
@@ -488,7 +525,7 @@ router.patch(
           req.user.name || req.user.email
         } actualizó la calificación de ${current.alumnoNombre} en ${
           materia?.nombre || "materia"
-        }.`,
+        } (${periodo}).`,
         entity: "calificacion",
         entityId: current.id,
       });
@@ -543,6 +580,7 @@ router.delete(
       }
 
       const materia = findMateria(materias, deleted.materiaId);
+      const periodo = deleted.periodo || "Final";
 
       await deleteDocument("calificaciones", id);
 
@@ -551,7 +589,7 @@ router.delete(
         title: "Calificación eliminada",
         description: `Se eliminó la calificación ${deleted.calificacion} de ${
           deleted.alumnoNombre
-        } en ${materia?.nombre || "materia"}.`,
+        } en ${materia?.nombre || "materia"} (${periodo}).`,
         entity: "calificacion",
         entityId: deleted.id,
       });
@@ -561,7 +599,7 @@ router.delete(
         title: "Calificación eliminada",
         message: `Se eliminó una calificación de ${
           materia?.nombre || "materia"
-        }.`,
+        } (${periodo}).`,
         entity: "calificacion",
         entityId: deleted.id,
       });
@@ -573,7 +611,7 @@ router.delete(
           req.user.name || req.user.email
         } eliminó una calificación de ${deleted.alumnoNombre} en ${
           materia?.nombre || "materia"
-        }.`,
+        } (${periodo}).`,
         entity: "calificacion",
         entityId: deleted.id,
       });
