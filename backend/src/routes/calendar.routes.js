@@ -62,6 +62,10 @@ function parsePositiveId(value) {
   return id;
 }
 
+function sameId(a, b) {
+  return String(a) === String(b);
+}
+
 function parseDate(value) {
   const raw = String(value || "").trim();
   const time = new Date(raw).getTime();
@@ -393,7 +397,7 @@ router.delete("/calendario/:id", auth, requireRole(ROLES.ADMIN, ROLES.MAESTRO), 
       getCollection("materias"),
     ]);
 
-    const deleted = eventos.find((event) => Number(event.id) === id);
+    const deleted = eventos.find((event) => sameId(event.id, id));
 
     if (!deleted) {
       return res.status(404).json({
@@ -407,7 +411,7 @@ router.delete("/calendario/:id", auth, requireRole(ROLES.ADMIN, ROLES.MAESTRO), 
       });
     }
 
-    await deleteDocument("calendario", id);
+    await deleteDocument("calendario", String(id));
 
     await createActivity(req, {
       type: "calendario_evento_eliminado",

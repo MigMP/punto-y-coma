@@ -1,7 +1,7 @@
 // Archivo: frontend/src/pages/Plan.jsx
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
 
 import NavBar from "../components/layout/NavBar.jsx";
 
@@ -783,93 +783,331 @@ export default function Plan() {
   };
 
   const exportToExcel = () => {
-    const resumenRows = [
-      ["Punto y Coma Académico - Plan de estudio"],
-      [],
-      ["Alumno", getUserName(user)],
-      ["Promedio general", Number.isFinite(promedioGeneral) ? Number(promedioGeneral.toFixed(2)) : ""],
-      ["Meta objetivo", Number.isFinite(metaObjetivo) ? Number(metaObjetivo.toFixed(2)) : ""],
-      ["Semáforo", riskLevel.label],
-      ["Materias evaluadas", materiaStats.length],
-      ["Materias en riesgo", materiasRiesgo.length],
-      ["Prioridad de la semana", prioridadSemana],
-    ];
-
-    const historialRows = calificacionesOrdenadas.map((item) => ({
-      Periodo: item.periodo,
-      Materia: item.materiaNombre,
-      Grupo: item.alumnoGrupo || "",
-      Boleta: item.alumnoBoleta || "",
-      Calificacion: Number(item.calificacion),
-      Actualizado: formatDate(item.updatedAt || item.createdAt),
-    }));
-
-    const materiaRows = materiaStats.map((item) => ({
-      Materia: item.materia,
-      Promedio: item.avg,
-      Registros: item.count,
-      Periodos: item.periodos
-        .map((periodo) => `${periodo.periodo}: ${fmtShort(periodo.calificacion)}`)
-        .join(" | "),
-      Recomendacion: item.advice,
-    }));
-
-    const periodoRows = periodoStats.map((item) => ({
-      Periodo: item.periodo,
-      Registros: item.count,
-      Promedio: item.avg,
-    }));
-
-    const planRows = plan.map((item) => ({
-      Dia: item.day,
-      Horario: item.time,
-      Materia: item.materia,
-      Tipo: item.sessionType || "Sesión",
-      PromedioMateria: item.avg ?? "",
-      Estado: item.status || "",
-      Objetivo: item.goal,
-      Actividades: Array.isArray(item.actions)
-        ? item.actions.map((action, index) => `${index + 1}. ${action}`).join("\n")
-        : "",
-      Evidencia: item.evidence || "",
-    }));
-
     const workbook = XLSX.utils.book_new();
 
-    const resumenSheet = XLSX.utils.aoa_to_sheet(resumenRows);
-    const historialSheet = XLSX.utils.json_to_sheet(historialRows);
-    const materiaSheet = XLSX.utils.json_to_sheet(materiaRows);
-    const periodoSheet = XLSX.utils.json_to_sheet(periodoRows);
-    const planSheet = XLSX.utils.json_to_sheet(planRows);
+    const titleStyle = {
+      font: { bold: true, sz: 18, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "7A0033" } },
+      alignment: { horizontal: "center", vertical: "center" },
+      border: {
+        top: { style: "thin", color: { rgb: "7A0033" } },
+        bottom: { style: "thin", color: { rgb: "7A0033" } },
+        left: { style: "thin", color: { rgb: "7A0033" } },
+        right: { style: "thin", color: { rgb: "7A0033" } },
+      },
+    };
 
-    resumenSheet["!cols"] = [{ wch: 28 }, { wch: 80 }];
-    historialSheet["!cols"] = [
-      { wch: 20 },
-      { wch: 30 },
-      { wch: 14 },
-      { wch: 16 },
-      { wch: 14 },
-      { wch: 26 },
+    const sectionStyle = {
+      font: { bold: true, sz: 13, color: { rgb: "7A0033" } },
+      fill: { fgColor: { rgb: "FCE7F3" } },
+      alignment: { horizontal: "left", vertical: "center" },
+      border: {
+        top: { style: "thin", color: { rgb: "E9B8C9" } },
+        bottom: { style: "thin", color: { rgb: "E9B8C9" } },
+        left: { style: "thin", color: { rgb: "E9B8C9" } },
+        right: { style: "thin", color: { rgb: "E9B8C9" } },
+      },
+    };
+
+    const headerStyle = {
+      font: { bold: true, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "7A0033" } },
+      alignment: { horizontal: "center", vertical: "center", wrapText: true },
+      border: {
+        top: { style: "thin", color: { rgb: "7A0033" } },
+        bottom: { style: "thin", color: { rgb: "7A0033" } },
+        left: { style: "thin", color: { rgb: "7A0033" } },
+        right: { style: "thin", color: { rgb: "7A0033" } },
+      },
+    };
+
+    const labelStyle = {
+      font: { bold: true, color: { rgb: "111827" } },
+      fill: { fgColor: { rgb: "F8FAFC" } },
+      alignment: { horizontal: "left", vertical: "center" },
+      border: {
+        top: { style: "thin", color: { rgb: "D1D5DB" } },
+        bottom: { style: "thin", color: { rgb: "D1D5DB" } },
+        left: { style: "thin", color: { rgb: "D1D5DB" } },
+        right: { style: "thin", color: { rgb: "D1D5DB" } },
+      },
+    };
+
+    const valueStyle = {
+      alignment: { horizontal: "left", vertical: "center", wrapText: true },
+      border: {
+        top: { style: "thin", color: { rgb: "D1D5DB" } },
+        bottom: { style: "thin", color: { rgb: "D1D5DB" } },
+        left: { style: "thin", color: { rgb: "D1D5DB" } },
+        right: { style: "thin", color: { rgb: "D1D5DB" } },
+      },
+    };
+
+    const numberStyle = {
+      ...valueStyle,
+      alignment: { horizontal: "center", vertical: "center" },
+      numFmt: "0.00",
+    };
+
+    const goodStyle = {
+      ...numberStyle,
+      font: { bold: true, color: { rgb: "166534" } },
+      fill: { fgColor: { rgb: "DCFCE7" } },
+    };
+
+    const warnStyle = {
+      ...numberStyle,
+      font: { bold: true, color: { rgb: "92400E" } },
+      fill: { fgColor: { rgb: "FEF3C7" } },
+    };
+
+    const badStyle = {
+      ...numberStyle,
+      font: { bold: true, color: { rgb: "991B1B" } },
+      fill: { fgColor: { rgb: "FEE2E2" } },
+    };
+
+    const mutedStyle = {
+      font: { color: { rgb: "64748B" } },
+      alignment: { horizontal: "left", vertical: "center", wrapText: true },
+      border: {
+        top: { style: "thin", color: { rgb: "E5E7EB" } },
+        bottom: { style: "thin", color: { rgb: "E5E7EB" } },
+        left: { style: "thin", color: { rgb: "E5E7EB" } },
+        right: { style: "thin", color: { rgb: "E5E7EB" } },
+      },
+    };
+
+    const getGradeStyle = (value) => {
+      const n = Number(value);
+
+      if (!Number.isFinite(n)) return valueStyle;
+      if (n < 6) return badStyle;
+      if (n < 8) return warnStyle;
+
+      return goodStyle;
+    };
+
+    const applyStyle = (sheet, rangeAddress, style) => {
+      const range = XLSX.utils.decode_range(rangeAddress);
+
+      for (let row = range.s.r; row <= range.e.r; row += 1) {
+        for (let col = range.s.c; col <= range.e.c; col += 1) {
+          const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+
+          if (!sheet[cellAddress]) {
+            sheet[cellAddress] = { t: "s", v: "" };
+          }
+
+          sheet[cellAddress].s = style;
+        }
+      }
+    };
+
+    const styleHeaderRow = (sheet, rowIndex, fromCol, toCol) => {
+      for (let col = fromCol; col <= toCol; col += 1) {
+        const address = XLSX.utils.encode_cell({ r: rowIndex, c: col });
+
+        if (sheet[address]) {
+          sheet[address].s = headerStyle;
+        }
+      }
+    };
+
+    const freezeTop = (sheet) => {
+      sheet["!freeze"] = { xSplit: 0, ySplit: 1 };
+    };
+
+    const resumenRows = [
+      ["Punto y Coma Académico - Plan de estudio", "", "", ""],
+      ["", "", "", ""],
+      ["Alumno", getUserName(user), "Fecha de exportación", formatDate(new Date().toISOString())],
+      ["Promedio general", Number.isFinite(promedioGeneral) ? Number(promedioGeneral.toFixed(2)) : "", "Meta objetivo", Number.isFinite(metaObjetivo) ? Number(metaObjetivo.toFixed(2)) : ""],
+      ["Semáforo", riskLevel.label, "Progreso", `${Math.round(progreso)}%`],
+      ["Materias evaluadas", materiaStats.length, "Materias en riesgo", materiasRiesgo.length],
+      ["", "", "", ""],
+      ["Prioridad de la semana", prioridadSemana, "", ""],
+      ["", "", "", ""],
+      ["Interpretación", riskLevel.message, "", ""],
     ];
+
+    const resumenSheet = XLSX.utils.aoa_to_sheet(resumenRows);
+    resumenSheet["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
+      { s: { r: 7, c: 1 }, e: { r: 7, c: 3 } },
+      { s: { r: 9, c: 1 }, e: { r: 9, c: 3 } },
+    ];
+    resumenSheet["!cols"] = [{ wch: 26 }, { wch: 50 }, { wch: 24 }, { wch: 32 }];
+    resumenSheet["!rows"] = [{ hpt: 28 }];
+
+    applyStyle(resumenSheet, "A1:D1", titleStyle);
+    applyStyle(resumenSheet, "A3:A6", labelStyle);
+    applyStyle(resumenSheet, "C3:C6", labelStyle);
+    applyStyle(resumenSheet, "B3:B6", valueStyle);
+    applyStyle(resumenSheet, "D3:D6", valueStyle);
+    applyStyle(resumenSheet, "A8:A8", sectionStyle);
+    applyStyle(resumenSheet, "B8:D8", valueStyle);
+    applyStyle(resumenSheet, "A10:A10", sectionStyle);
+    applyStyle(resumenSheet, "B10:D10", valueStyle);
+
+    const historialRows = [
+      ["Periodo", "Materia", "Grupo", "Boleta", "Calificación", "Actualizado"],
+      ...calificacionesOrdenadas.map((item) => [
+        item.periodo,
+        item.materiaNombre,
+        item.alumnoGrupo || "",
+        item.alumnoBoleta || "",
+        Number(item.calificacion),
+        formatDate(item.updatedAt || item.createdAt),
+      ]),
+    ];
+
+    const historialSheet = XLSX.utils.aoa_to_sheet(historialRows);
+    historialSheet["!cols"] = [
+      { wch: 22 },
+      { wch: 34 },
+      { wch: 16 },
+      { wch: 18 },
+      { wch: 14 },
+      { wch: 28 },
+    ];
+    historialSheet["!autofilter"] = {
+      ref: `A1:F${Math.max(historialRows.length, 1)}`,
+    };
+    freezeTop(historialSheet);
+    styleHeaderRow(historialSheet, 0, 0, 5);
+
+    for (let row = 1; row < historialRows.length; row += 1) {
+      for (let col = 0; col <= 5; col += 1) {
+        const address = XLSX.utils.encode_cell({ r: row, c: col });
+
+        if (historialSheet[address]) {
+          historialSheet[address].s =
+            col === 4 ? getGradeStyle(historialRows[row][4]) : valueStyle;
+        }
+      }
+    }
+
+    const materiaRows = [
+      ["Materia", "Promedio", "Registros", "Periodos", "Recomendación"],
+      ...materiaStats.map((item) => [
+        item.materia,
+        item.avg,
+        item.count,
+        item.periodos
+          .map((periodo) => `${periodo.periodo}: ${fmtShort(periodo.calificacion)}`)
+          .join(" | "),
+        item.advice,
+      ]),
+    ];
+
+    const materiaSheet = XLSX.utils.aoa_to_sheet(materiaRows);
     materiaSheet["!cols"] = [
-      { wch: 30 },
-      { wch: 12 },
+      { wch: 34 },
+      { wch: 14 },
       { wch: 12 },
       { wch: 55 },
-      { wch: 80 },
+      { wch: 85 },
     ];
-    periodoSheet["!cols"] = [{ wch: 20 }, { wch: 12 }, { wch: 12 }];
+    materiaSheet["!autofilter"] = {
+      ref: `A1:E${Math.max(materiaRows.length, 1)}`,
+    };
+    freezeTop(materiaSheet);
+    styleHeaderRow(materiaSheet, 0, 0, 4);
+
+    for (let row = 1; row < materiaRows.length; row += 1) {
+      for (let col = 0; col <= 4; col += 1) {
+        const address = XLSX.utils.encode_cell({ r: row, c: col });
+
+        if (materiaSheet[address]) {
+          materiaSheet[address].s =
+            col === 1 ? getGradeStyle(materiaRows[row][1]) : valueStyle;
+        }
+      }
+    }
+
+    const periodoRows = [
+      ["Periodo", "Registros", "Promedio"],
+      ...periodoStats.map((item) => [item.periodo, item.count, item.avg]),
+    ];
+
+    const periodoSheet = XLSX.utils.aoa_to_sheet(periodoRows);
+    periodoSheet["!cols"] = [{ wch: 24 }, { wch: 14 }, { wch: 14 }];
+    periodoSheet["!autofilter"] = {
+      ref: `A1:C${Math.max(periodoRows.length, 1)}`,
+    };
+    freezeTop(periodoSheet);
+    styleHeaderRow(periodoSheet, 0, 0, 2);
+
+    for (let row = 1; row < periodoRows.length; row += 1) {
+      for (let col = 0; col <= 2; col += 1) {
+        const address = XLSX.utils.encode_cell({ r: row, c: col });
+
+        if (periodoSheet[address]) {
+          periodoSheet[address].s =
+            col === 2 ? getGradeStyle(periodoRows[row][2]) : valueStyle;
+        }
+      }
+    }
+
+    const planRows = [
+      [
+        "Día",
+        "Horario",
+        "Materia",
+        "Tipo de sesión",
+        "Promedio",
+        "Estado",
+        "Objetivo",
+        "Actividades detalladas",
+        "Evidencia sugerida",
+      ],
+      ...plan.map((item) => [
+        item.day,
+        item.time,
+        item.materia,
+        item.sessionType || "Sesión",
+        item.avg ?? "",
+        item.status || "",
+        item.goal,
+        Array.isArray(item.actions)
+          ? item.actions.map((action, index) => `${index + 1}. ${action}`).join("\n")
+          : "",
+        item.evidence || "",
+      ]),
+    ];
+
+    const planSheet = XLSX.utils.aoa_to_sheet(planRows);
     planSheet["!cols"] = [
       { wch: 14 },
-      { wch: 18 },
-      { wch: 30 },
-      { wch: 22 },
-      { wch: 16 },
+      { wch: 20 },
+      { wch: 34 },
+      { wch: 24 },
+      { wch: 14 },
       { wch: 18 },
       { wch: 70 },
-      { wch: 90 },
+      { wch: 95 },
       { wch: 70 },
     ];
+    planSheet["!rows"] = planRows.map((_, index) => ({
+      hpt: index === 0 ? 24 : 90,
+    }));
+    planSheet["!autofilter"] = {
+      ref: `A1:I${Math.max(planRows.length, 1)}`,
+    };
+    freezeTop(planSheet);
+    styleHeaderRow(planSheet, 0, 0, 8);
+
+    for (let row = 1; row < planRows.length; row += 1) {
+      for (let col = 0; col <= 8; col += 1) {
+        const address = XLSX.utils.encode_cell({ r: row, c: col });
+
+        if (planSheet[address]) {
+          planSheet[address].s =
+            col === 4 ? getGradeStyle(planRows[row][4]) : valueStyle;
+        }
+      }
+    }
 
     XLSX.utils.book_append_sheet(workbook, resumenSheet, "Resumen");
     XLSX.utils.book_append_sheet(workbook, historialSheet, "Historial");
@@ -882,7 +1120,7 @@ export default function Plan() {
     showToast({
       type: "success",
       title: "Excel exportado",
-      message: "Se descargó el archivo .xlsx del plan de estudio.",
+      message: "Se descargó el archivo .xlsx con formato mejorado.",
     });
   };
 

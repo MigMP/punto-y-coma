@@ -173,6 +173,7 @@ export default function Calendario() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deletingEventId, setDeletingEventId] = useState(null);
 
   const [form, setForm] = useState(() => {
     const dates = getDefaultEventDates();
@@ -377,9 +378,22 @@ export default function Calendario() {
   };
 
   const deleteEvent = async (calendarEvent) => {
+    const eventId = calendarEvent?.id ?? calendarEvent?._id;
+
+    if (!eventId) {
+      showToast({
+        type: "error",
+        title: "No se puede eliminar",
+        message: "El evento no tiene un ID válido.",
+      });
+      return;
+    }
+
     const ok = await confirm({
       title: "Eliminar evento",
-      message: `¿Seguro que quieres eliminar "${calendarEvent.title}"?`,
+      message: `¿Seguro que quieres eliminar "${
+        calendarEvent.title || "este evento"
+      }"?`,
       confirmText: "Eliminar",
       cancelText: "Cancelar",
       tone: "danger",
@@ -388,15 +402,23 @@ export default function Calendario() {
     if (!ok) return;
 
     try {
-      await apiJSON(`/calendario/${calendarEvent.id}`, {
+      setDeletingEventId(eventId);
+
+      await apiJSON(`/calendario/${encodeURIComponent(eventId)}`, {
         token,
         method: "DELETE",
       });
 
+      setEventos((prev) =>
+        prev.filter(
+          (event) => String(event.id ?? event._id) !== String(eventId)
+        )
+      );
+
       showToast({
         type: "success",
         title: "Evento eliminado",
-        message: calendarEvent.title,
+        message: calendarEvent.title || "El evento fue eliminado.",
       });
 
       await loadData();
@@ -404,8 +426,12 @@ export default function Calendario() {
       showToast({
         type: "error",
         title: "No se eliminó",
-        message: error.message || "Intenta nuevamente.",
+        message:
+          error.message ||
+          "No se pudo eliminar. Revisa permisos o conexión con el backend.",
       });
+    } finally {
+      setDeletingEventId(null);
     }
   };
 
@@ -743,9 +769,17 @@ export default function Calendario() {
                       type="button"
                       className="btn-del"
                       onClick={() => deleteEvent(calendarEvent)}
-                      disabled={loading || saving}
+                      disabled={
+                        loading ||
+                        saving ||
+                        String(deletingEventId) ===
+                          String(calendarEvent.id ?? calendarEvent._id)
+                      }
                     >
-                      Eliminar
+                      {String(deletingEventId) ===
+                      String(calendarEvent.id ?? calendarEvent._id)
+                        ? "Eliminando..."
+                        : "Eliminar"}
                     </button>
                   )}
                 </div>
