@@ -1,4 +1,15 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+// Archivo: frontend/src/components/feedback/ConfirmProvider.jsx
+
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
 import "../../styles/feedback.css";
 
 const ConfirmContext = createContext(null);
@@ -19,6 +30,7 @@ export function ConfirmProvider({ children }) {
   const confirm = useCallback((options = {}) => {
     if (resolverRef.current) {
       resolverRef.current(false);
+      resolverRef.current = null;
     }
 
     return new Promise((resolve) => {
@@ -36,7 +48,7 @@ export function ConfirmProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    if (!dialog) return;
+    if (!dialog) return undefined;
 
     const onKeyDown = (event) => {
       if (event.key === "Escape") {
@@ -58,7 +70,11 @@ export function ConfirmProvider({ children }) {
       {children}
 
       {dialog && (
-        <div className="confirmOverlay" onMouseDown={() => close(false)}>
+        <div
+          className="confirmOverlay"
+          role="presentation"
+          onMouseDown={() => close(false)}
+        >
           <section
             className="confirmDialog"
             role="dialog"
@@ -67,7 +83,10 @@ export function ConfirmProvider({ children }) {
             aria-describedby="confirm-message"
             onMouseDown={(event) => event.stopPropagation()}
           >
-            <div className={`confirmMark confirm-${dialog.tone}`} aria-hidden="true" />
+            <div
+              className={`confirmMark confirm-${dialog.tone || "danger"}`}
+              aria-hidden="true"
+            />
 
             <div className="confirmBody">
               <h2 id="confirm-title">{dialog.title}</h2>
@@ -75,7 +94,11 @@ export function ConfirmProvider({ children }) {
             </div>
 
             <div className="confirmActions">
-              <button type="button" className="btn-ghost" onClick={() => close(false)}>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => close(false)}
+              >
                 {dialog.cancelText}
               </button>
 
